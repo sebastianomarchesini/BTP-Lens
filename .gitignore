@@ -6,3 +6,7 @@ reports/
 *.tsbuildinfo
 test-results/
 playwright-report/
+# Copied in by packages/cli/scripts/prepack.mjs
+packages/cli/README.md
+packages/cli/LICENSE
+packages/cli/NOTICE

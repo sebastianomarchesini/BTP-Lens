@@ -1,0 +1,10 @@
+{
+  "links": {
+    "self": { "href": "https://api.cf.example.org" },
+    "cloud_controller_v3": { "href": "https://api.cf.example.org/v3", "meta": { "version": "3.190.0" } },
+    "uaa": { "href": "https://uaa.cf.example.org" },
+    "login": { "href": "https://login.cf.example.org" },
+    "log_cache": { "href": "https://log-cache.cf.example.org" },
+    "app_ssh": { "href": "ssh.cf.example.org:2222", "meta": { "host_key_fingerprint": "aa:bb", "oauth_client": "ssh-proxy" } }
+  }
+}

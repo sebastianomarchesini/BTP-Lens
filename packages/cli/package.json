@@ -1,0 +1,51 @@
+{
+  "name": "btp-lens",
+  "version": "0.1.0-dev",
+  "description": "Read-only scanner for Cloud Foundry landscapes on SAP BTP: inventory, runtime health, outdated libraries and security posture.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "btp-lens": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "keywords": [
+    "cloud-foundry",
+    "btp",
+    "security",
+    "sbom",
+    "audit",
+    "cli"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-report-template.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage",
+    "sample": "node dist/cli.js report --from test/fixtures/sample-snapshot.json --format html,json,csv,sarif --out ../../reports/sample",
+    "prepack": "node scripts/prepack.mjs"
+  },
+  "dependencies": {
+    "commander": "^15.0.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sebastianomarchesini/BTP-Lens.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/sebastianomarchesini/BTP-Lens#readme",
+  "bugs": {
+    "url": "https://github.com/sebastianomarchesini/BTP-Lens/issues"
+  }
+}

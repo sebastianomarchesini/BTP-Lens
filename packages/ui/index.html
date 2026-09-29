@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- The report must work offline: no fonts or locale data from a CDN. -->
+    <script data-ui5-config type="application/json">
+      { "defaultFontLoading": false, "theme": "sap_horizon_auto" }
+    </script>
+    <title>BTP Lens report</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="application/json" id="btp-lens-data">
+      <!--BTP_LENS_DATA-->
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
