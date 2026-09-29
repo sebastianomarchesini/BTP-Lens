@@ -1,0 +1,12 @@
+# Default owner for everything.
+*                                   @sebastianomarchesini
+
+# Security-sensitive areas always need the maintainer's review.
+/packages/cli/src/http/             @sebastianomarchesini
+/packages/cli/src/net/              @sebastianomarchesini
+/packages/cli/src/reporters/        @sebastianomarchesini
+/packages/cli/src/sbom/             @sebastianomarchesini
+/.github/                           @sebastianomarchesini
+/SECURITY.md                        @sebastianomarchesini
+/docs/privacy.md                    @sebastianomarchesini
+/docs/data-sources.md               @sebastianomarchesini

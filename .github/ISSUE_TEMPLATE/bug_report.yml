@@ -1,0 +1,47 @@
+name: Bug report
+description: Something did not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Before you paste anything:** never include tokens, your `~/.cf/config.json`,
+        service keys or environment variable *values*. Org, space and app names are fine, or run
+        `btp-lens report --redact` and share that output instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `btp-lens version`
+      placeholder: btp-lens 0.1.0 (node 22.x, linux)
+    validations:
+      required: true
+  - type: dropdown
+    id: how
+    attributes:
+      label: How did you run it?
+      options:
+        - npx btp-lens (guided mode, no flags)
+        - btp-lens scan with flags
+        - Downloaded executable (Windows/macOS)
+        - GitHub Action
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: The command (secrets removed) and what you saw.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Checklist
+      options:
+        - label: I removed every token, password and secret value from this report.
+          required: true
