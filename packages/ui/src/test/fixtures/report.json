@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "btp-lens",
+    "version": "0.1.0-dev"
+  },
+  "scannedAt": "2026-09-29T00:00:00.000Z",
+  "scope": {
+    "apiEndpoint": "https://api.cf.example.org/",
+    "orgs": [
+      "acme-prod"
+    ]
+  },
+  "options": {
+    "deep": false,
+    "probeRoutes": true
+  },
+  "checks": [
+    {
+      "id": "collect.apps",
+      "title": "App inventory (GET /v3/apps)",
+      "roles": [
+        "SpaceAuditor"
+      ],
+      "status": "ran"
+    },
+    {
+      "id": "collect.droplets",
+      "title": "Current droplets (GET /v3/droplets?current=true)",
+      "roles": [
+        "SpaceAuditor"
+      ],
+      "status": "ran"
+    },
+    {
+      "id": "rule.APP_NO_RECENT_DEPLOY",
+      "title": "No deploy in the last 12 months",
+      "roles": [
+        "SpaceAuditor"
+      ],
+      "status": "ran"
+    }
+  ],
+  "apps": [
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000003",
+      "name": "legacy-reporting",
+      "org": "acme-prod",
+      "space": "prod",
+      "state": "STOPPED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs3",
+      "buildpacks": [
+        {
+          "name": "sap_java_buildpack",
+          "version": "1.84.0"
+        }
+      ],
+      "createdAt": "2021-05-03T07:00:00Z",
+      "updatedAt": "2024-06-30T16:00:00Z",
+      "lastDeployAt": "2024-03-15T08:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 1,
+        "low": 0,
+        "info": 0
+      },
+      "highestSeverity": "medium",
+      "riskScore": 5
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000005",
+      "name": "docs-static",
+      "org": "acme-prod",
+      "space": "dev",
+      "state": "STARTED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs4",
+      "buildpacks": [
+        {
+          "name": "staticfile",
+          "version": "1.6.3"
+        }
+      ],
+      "createdAt": "2025-08-20T11:00:00Z",
+      "updatedAt": "2025-08-20T12:05:00Z",
+      "lastDeployAt": "2025-08-20T12:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 1,
+        "info": 0
+      },
+      "highestSeverity": "low",
+      "riskScore": 1
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000002",
+      "name": "orders-approuter",
+      "org": "acme-prod",
+      "space": "prod",
+      "state": "STARTED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs4",
+      "buildpacks": [
+        {
+          "name": "nodejs",
+          "version": "1.8.21"
+        }
+      ],
+      "createdAt": "2024-02-01T09:10:00Z",
+      "updatedAt": "2025-07-01T09:05:00Z",
+      "lastDeployAt": "2025-07-01T09:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 1,
+        "info": 0
+      },
+      "highestSeverity": "low",
+      "riskScore": 1
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000006",
+      "name": "custom-bp-app",
+      "org": "acme-prod",
+      "space": "dev",
+      "state": "STARTED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs4",
+      "buildpacks": [
+        {
+          "name": "custom",
+          "version": "1.2.0"
+        }
+      ],
+      "createdAt": "2026-01-15T10:00:00Z",
+      "updatedAt": "2026-09-01T00:05:00Z",
+      "lastDeployAt": "2026-09-01T00:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "highestSeverity": null,
+      "riskScore": 0
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000007",
+      "name": "docker-worker",
+      "org": "acme-prod",
+      "space": "dev",
+      "state": "STARTED",
+      "lifecycleType": "docker",
+      "stack": null,
+      "buildpacks": [],
+      "createdAt": "2026-02-02T10:00:00Z",
+      "updatedAt": "2026-09-09T00:05:00Z",
+      "lastDeployAt": "2026-09-09T00:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "highestSeverity": null,
+      "riskScore": 0
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000004",
+      "name": "inventory-java",
+      "org": "acme-prod",
+      "space": "prod",
+      "state": "STARTED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs4",
+      "buildpacks": [
+        {
+          "name": "sap_java_buildpack",
+          "version": "1.92.0"
+        }
+      ],
+      "createdAt": "2023-11-20T12:00:00Z",
+      "updatedAt": "2026-04-02T12:10:00Z",
+      "lastDeployAt": "2026-04-02T12:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "highestSeverity": null,
+      "riskScore": 0
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000008",
+      "name": "never-staged",
+      "org": "acme-prod",
+      "space": "dev",
+      "state": "STOPPED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs4",
+      "buildpacks": [],
+      "createdAt": "2026-09-20T10:00:00Z",
+      "updatedAt": "2026-09-20T10:00:00Z",
+      "lastDeployAt": null,
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "highestSeverity": null,
+      "riskScore": 0
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000001",
+      "name": "orders-srv",
+      "org": "acme-prod",
+      "space": "prod",
+      "state": "STARTED",
+      "lifecycleType": "buildpack",
+      "stack": "cflinuxfs4",
+      "buildpacks": [
+        {
+          "name": "nodejs",
+          "version": "1.8.40"
+        }
+      ],
+      "createdAt": "2024-02-01T09:00:00Z",
+      "updatedAt": "2026-07-20T10:05:00Z",
+      "lastDeployAt": "2026-07-20T10:00:00Z",
+      "findingCounts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "info": 0
+      },
+      "highestSeverity": null,
+      "riskScore": 0
+    }
+  ],
+  "findings": [
+    {
+      "id": "APP_NO_RECENT_DEPLOY",
+      "severity": "medium",
+      "title": "Last deployed 30 months ago",
+      "app": {
+        "guid": "a99a0000-0000-4000-8000-000000000003",
+        "name": "legacy-reporting",
+        "space": "prod",
+        "org": "acme-prod"
+      },
+      "evidence": {
+        "lastDeployAt": "2024-03-15T08:00:00Z",
+        "ageDays": 927,
+        "thresholdDays": 365
+      },
+      "remediation": "Update the app dependencies and redeploy (`cf push`), or restage (`cf restage`) to pick up the current buildpack and runtime patches. If the app is no longer needed, delete it.",
+      "references": [
+        "https://docs.cloudfoundry.org/devguide/deploy-apps/start-restart-restage.html"
+      ]
+    },
+    {
+      "id": "APP_NO_RECENT_DEPLOY",
+      "severity": "low",
+      "title": "Last deployed 13 months ago",
+      "app": {
+        "guid": "a99a0000-0000-4000-8000-000000000005",
+        "name": "docs-static",
+        "space": "dev",
+        "org": "acme-prod"
+      },
+      "evidence": {
+        "lastDeployAt": "2025-08-20T12:00:00Z",
+        "ageDays": 404,
+        "thresholdDays": 365
+      },
+      "remediation": "Update the app dependencies and redeploy (`cf push`), or restage (`cf restage`) to pick up the current buildpack and runtime patches. If the app is no longer needed, delete it.",
+      "references": [
+        "https://docs.cloudfoundry.org/devguide/deploy-apps/start-restart-restage.html"
+      ]
+    },
+    {
+      "id": "APP_NO_RECENT_DEPLOY",
+      "severity": "low",
+      "title": "Last deployed 15 months ago",
+      "app": {
+        "guid": "a99a0000-0000-4000-8000-000000000002",
+        "name": "orders-approuter",
+        "space": "prod",
+        "org": "acme-prod"
+      },
+      "evidence": {
+        "lastDeployAt": "2025-07-01T09:00:00Z",
+        "ageDays": 454,
+        "thresholdDays": 365
+      },
+      "remediation": "Update the app dependencies and redeploy (`cf push`), or restage (`cf restage`) to pick up the current buildpack and runtime patches. If the app is no longer needed, delete it.",
+      "references": [
+        "https://docs.cloudfoundry.org/devguide/deploy-apps/start-restart-restage.html"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "APP_NO_RECENT_DEPLOY",
+      "title": "No deploy in the last 12 months",
+      "description": "The current droplet was staged more than 12 months ago. The app runs with the libraries, buildpack and runtime from that time, so fixes released since then are missing.",
+      "roles": [
+        "SpaceAuditor"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#app_no_recent_deploy"
+    }
+  ],
+  "summary": {
+    "apps": 8,
+    "findings": 3,
+    "findingsBySeverity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 2,
+      "info": 0
+    },
+    "checksSkipped": 0
+  }
+}

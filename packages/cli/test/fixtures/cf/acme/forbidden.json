@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "detail": "You are not authorized to perform the requested action",
+      "title": "CF-NotAuthorized",
+      "code": 10003
+    }
+  ]
+}

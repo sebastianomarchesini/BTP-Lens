@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-report
+coverage
+reports
+package-lock.json
+packages/cli/test/fixtures
+packages/ui/src/test/fixtures
+docs/images
+**/*.md
+test-results

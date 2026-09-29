@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint, test, build (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - name: Coverage (analyzers must stay above 85% lines)
+        run: npm run coverage -w btp-lens
+      - name: Generate sample report from fixtures
+        run: npm run sample
+      - name: Offline report check (network disabled)
+        if: matrix.node == 24
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
+      - name: Upload sample report
+        if: matrix.node == 24
+        uses: actions/upload-artifact@v7
+        with:
+          name: sample-report
+          path: reports/sample/

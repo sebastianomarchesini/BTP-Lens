@@ -1,0 +1,142 @@
+{
+  "pagination": {
+    "total_results": 8,
+    "total_pages": 2,
+    "first": {
+      "href": "https://api.cf.example.org/v3/apps?organization_guids=0a1b2c3d-0000-4000-8000-000000000001&page=1&per_page=5000"
+    },
+    "last": {
+      "href": "https://api.cf.example.org/v3/apps?organization_guids=0a1b2c3d-0000-4000-8000-000000000001&page=2&per_page=5000"
+    },
+    "next": null,
+    "previous": null
+  },
+  "resources": [
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000006",
+      "created_at": "2026-01-15T10:00:00Z",
+      "updated_at": "2026-09-01T00:05:00Z",
+      "name": "custom-bp-app",
+      "state": "STARTED",
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {
+          "buildpacks": [
+            "https://deploy-bot:FAKE-POISON-TOKEN-123@github.com/acme/custom-buildpack.git#v1.2"
+          ],
+          "stack": "cflinuxfs4"
+        }
+      },
+      "relationships": {
+        "space": {
+          "data": {
+            "guid": "5pace000-0000-4000-8000-000000000dev"
+          }
+        },
+        "current_droplet": {
+          "data": {
+            "guid": "d20d0000-0000-4000-8000-000000000006"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {
+          "team": "orders"
+        },
+        "annotations": {
+          "owner": "jane.doe@example.com",
+          "contact": "POISON-annotation-contact"
+        }
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/apps/a99a0000-0000-4000-8000-000000000006"
+        },
+        "environment_variables": {
+          "href": "https://api.cf.example.org/v3/apps/a99a0000-0000-4000-8000-000000000006/environment_variables"
+        }
+      }
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000007",
+      "created_at": "2026-02-02T10:00:00Z",
+      "updated_at": "2026-09-09T00:05:00Z",
+      "name": "docker-worker",
+      "state": "STARTED",
+      "lifecycle": {
+        "type": "docker",
+        "data": {}
+      },
+      "relationships": {
+        "space": {
+          "data": {
+            "guid": "5pace000-0000-4000-8000-000000000dev"
+          }
+        },
+        "current_droplet": {
+          "data": {
+            "guid": "d20d0000-0000-4000-8000-000000000007"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {
+          "team": "orders"
+        },
+        "annotations": {
+          "owner": "jane.doe@example.com",
+          "contact": "POISON-annotation-contact"
+        }
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/apps/a99a0000-0000-4000-8000-000000000007"
+        },
+        "environment_variables": {
+          "href": "https://api.cf.example.org/v3/apps/a99a0000-0000-4000-8000-000000000007/environment_variables"
+        }
+      }
+    },
+    {
+      "guid": "a99a0000-0000-4000-8000-000000000008",
+      "created_at": "2026-09-20T10:00:00Z",
+      "updated_at": "2026-09-20T10:00:00Z",
+      "name": "never-staged",
+      "state": "STOPPED",
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {
+          "buildpacks": [],
+          "stack": "cflinuxfs4"
+        }
+      },
+      "relationships": {
+        "space": {
+          "data": {
+            "guid": "5pace000-0000-4000-8000-000000000dev"
+          }
+        },
+        "current_droplet": {
+          "data": null
+        }
+      },
+      "metadata": {
+        "labels": {
+          "team": "orders"
+        },
+        "annotations": {
+          "owner": "jane.doe@example.com",
+          "contact": "POISON-annotation-contact"
+        }
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/apps/a99a0000-0000-4000-8000-000000000008"
+        },
+        "environment_variables": {
+          "href": "https://api.cf.example.org/v3/apps/a99a0000-0000-4000-8000-000000000008/environment_variables"
+        }
+      }
+    }
+  ]
+}
