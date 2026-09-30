@@ -1,4 +1,84 @@
-# Security review: BTP Lens (design and repository), 2026-09-29
+# Security review: BTP Lens
+
+Two parts. **Part 1** (2026-09-29) is the design and repository review written before any code existed. **Part 2** (2026-09-30) is the code review of slice 1 against Part 1's checklist, with what was fixed in the same change and what stays open. Read Part 2 first if you want the current state.
+
+---
+
+# Part 2: code review of slice 1, 2026-09-30
+
+**Scope.** Everything under `packages/cli/src` and `packages/ui/src` as merged by PR #2 (GET-only CF client, egress allow-list, credentials, collectors for orgs, spaces, apps and droplets, `APP_NO_RECENT_DEPLOY`, JSON/CSV/SARIF/HTML reporters, the React + UI5 report), the CI workflows, `package.json` manifests and the repository settings. Method: read every file on the request, credential and output paths line by line against the §7 checklist below; run the test suite; grep the sources and the built bundle for TLS-disable, `eval` and raw-HTML patterns; verify the pinned GitHub Action SHAs against the upstream tags with `git ls-remote`; check the npm registry and the GitHub repository settings.
+
+Verdicts: **✅ verified** (present in code and covered by a test), **🔧 fixed now** (was missing; implemented in this change with a test), **⏳ open** (not yet applicable or deferred, with the reason), **👤 owner** (only the repository owner can do it).
+
+## 2.1 Checklist results
+
+| Item | Verdict | Where |
+|---|---|---|
+| GET-only to the CF API; every other method and every unknown host refused before `fetch` (constraint 1) | ✅ | `net/allowlist.ts` `EgressPolicy.authorize`, `test/unit/allowlist.test.ts`, `cfClient.test.ts` |
+| SEC-02 token bound to host: `Authorization` allowed only where the rule says so | ✅ | `allowAuthorization` per rule; the client throws on a header to a public host |
+| SEC-03 no redirects on any request | ✅ | `redirect: 'manual'` in `httpClient.ts`; a 3xx from CF is an error ("redirect not followed") |
+| SEC-09 discovered links must be `https:` | ✅ | `authorize` denies any non-https URL, so a `http:` UAA link can never be called |
+| SEC-13 `report --from` is offline | ✅ | `runReport` never constructs an `HttpClient`; `cli.test.ts` injects a fetch that rejects |
+| SEC-01 TLS verification never disabled, `SSLDisabled` ignored | ✅ | grep of `packages/` for `rejectUnauthorized`, `NODE_TLS_REJECT_UNAUTHORIZED`, `SSLDisabled`: no hits; `CfCliConfigSchema` does not read the field |
+| SEC-04 redaction on every log and error path | 🔧 | `io/redact.ts`: every `stdout`/`stderr` write in `main.ts` strips ANSI/OSC/C0/C1 sequences and redacts JWT shapes, `bearer …`, and `refresh_token`/`access_token`/`client_secret`/`password`/`passcode` fields. `redact.test.ts`, `cli.test.ts` |
+| SEC-17 terminal escape injection through app, org and space names | 🔧 | same filter; test with an OSC title-setting sequence in an org name |
+| SEC-06 no token, config path or operator name in outputs | ✅ | strict zod schemas for `raw`, `apps`, `findings`; `leak.test.ts` plants poison values and scans all six output files for them, e-mails, JWTs, bearer tokens and credential URLs |
+| SEC-07 JWT `exp` read locally, nothing else trusted | ✅ | `jwtExpiryMs` reads `exp` only; malformed → refresh |
+| SEC-05 no secret as a CLI flag; `_FILE` variant | ✅ / ⏳ | No flag exists. `BTP_LENS_CLIENT_SECRET_FILE` is not implemented yet (v0.2, CI use case) |
+| `/v3/apps/:guid/env` and binding `details` refused even for GET | 🔧 | `cfApiRule` gained a `deny` pattern (also `parameters`, `credentials`), tested raw and percent-decoded; `/environment_variables` stays allowed for `--deep` |
+| SEC-08 route probe SSRF guards | ⏳ | The probe is not implemented yet (`--no-probe-routes` exists but no collector reads routes). The §2.2 requirements apply unchanged when it lands; the flag should be documented as "reserved" until then |
+| SEC-10 OSV disclosure, `--no-osv`, `--osv-exclude` | ⏳ | OSV client not implemented yet |
+| SEC-11 fixed `User-Agent` | ✅ | `btp-lens/<version>`, no OS or Node details |
+| SEC-12 caps on `Retry-After` and body size | ✅ | 120 s cap; 64 MB default body cap, streamed and cut off; `httpClient.test.ts` |
+| SEC-15 HTML injection | ✅ / 🔧 | JSON embedded with `\u003c`/`\u003e`/`\u0026`/U+2028/U+2029 escaping (`reporters/html.ts`); no `dangerouslySetInnerHTML` anywhere; evidence rendered as text. **Fixed now:** a Content Security Policy in the built report (`default-src 'none'; script-src 'sha256-…'; connect-src 'none'; base-uri 'none'`) and an http(s)-only guard on reference links. `e2e/offline-report.spec.ts` asserts the policy and that an injected inline script does not run |
+| SEC-16 CSV formula injection | ✅ | `csvCell` prefixes `= + - @ TAB CR` with `'`; `reporters.test.ts` |
+| SEC-18 no file names from CF names | ✅ | `snapshot-<timestamp>.json` and fixed report names |
+| SEC-19 SBOM parsing | ⏳ | `sbom` command not implemented yet |
+| SEC-20 SARIF without local paths | ✅ | pseudo-URIs `cf/<org>/<space>/<app>`, percent-encoded |
+| SEC-21 snapshot input validated and size-capped | ✅ / 🔧 | strict zod parse, schema version check; **fixed now:** 256 MB cap before parsing (`snapshot.ts`, `files.test.ts`) |
+| SEC-22 private output modes and warning | 🔧 | `io/files.ts`: directories `0700`, files `0600` (`files.test.ts`); guided mode prints the sharing warning. The one-line warning for `scan` is still to add |
+| SEC-23 `report --redact` | ⏳ | not implemented; needed before testers share screenshots (campaign Phase 0) |
+| Fixture linter (no e-mails, tokens, real hosts, IPs) | ⏳ | Fixtures use `example.org` and synthetic GUIDs, and `leak.test.ts` covers outputs, but there is no test that lints the fixture files themselves |
+| SC-01 provenance publishing from CI | 👤 / ⏳ | no release workflow yet |
+| SC-02 actions pinned by SHA | ✅ / 🔧 | `security.yml` already pinned; all seven SHAs re-verified against upstream tags today. **Fixed now:** `ci.yml` was on floating `@v7` tags and is pinned; the new `pages.yml` is pinned |
+| SC-03 `npm ci --ignore-scripts`, tiny runtime dependency list | 🔧 / ✅ | CI and Pages install with `--ignore-scripts` (build and tests verified to pass that way). Runtime dependencies: `commander`, `zod` only |
+| SC-04 `files` whitelist | ✅ | `packages/cli/package.json` ships `dist`, `README.md`, `LICENSE`, `NOTICE`; `npm pack --dry-run` check in CI still to add |
+| SC-05 bundled licences | ✅ | `THIRD_PARTY_LICENSES.md` generated and embedded in the report as a leading comment |
+
+## 2.2 Findings not in Part 1
+
+| Id | Sev | Finding | Status |
+|---|---|---|---|
+| **SEC-24** | Medium | Guided mode introduces two new credential inputs (one-time passcode, password). Risk: echo to the terminal, reuse, or persistence. | 🔧 Input is hidden (`TerminalPrompter` mutes the echo), the grant is sent once and the field cleared from memory (`UaaSessionTokenProvider`), the session lives in memory only, and tests assert the code never appears in the transcript or the snapshot. The grant matches `cf login --sso` exactly (data-sources §1.1) |
+| **SEC-25** | Low | Opening the report and the passcode page uses an OS opener. Risk: shell injection through the path. | 🔧 `spawn` with an argument array, never a shell string; both paths are built by BTP Lens, not from CF data |
+| **SEC-26** | Low | `--no-probe-routes` and the `probeRoutes` snapshot option exist but nothing probes yet; a reader could believe the guard is active. | ⏳ Document as reserved until the collector lands |
+| **SEC-27** | Info | `HttpNetworkError` embeds the undici cause message. Today these are safe (`fetch failed`, `ENOTFOUND`); the redaction filter now covers the case where a future cause carries a URL with credentials. | ✅ covered by SEC-04 fix |
+
+## 2.3 Repository state re-checked on 2026-09-30
+
+| Check | Result |
+|---|---|
+| Branch protection on `main` | **Still none** (`protected: false` for all three branches). Owner action §6.2 stands |
+| Collaborators | owner only |
+| Open pull requests | none; PR #1 and #2 merged |
+| npm `btp-lens` | **Still unclaimed** (`npm view` → 404). Reserve it before any public post |
+| Pinned action SHAs (`security.yml`) | all seven match the upstream tags (`git ls-remote`) |
+| Secrets in the new commits | none; `gitleaks` runs on push |
+
+## 2.4 What to run before tagging 0.1.0 (delta to §7)
+
+- [ ] SEC-08 route probe guards when the collector lands (private ranges, `.internal`, https only, DNS pin, 5 s, 256 KB, JSON only)
+- [ ] SEC-10 OSV disclosure and flags when the OSV client lands
+- [ ] SEC-19 SBOM parsing guards when `sbom` lands
+- [ ] SEC-23 `report --redact`
+- [ ] SEC-05 `BTP_LENS_CLIENT_SECRET_FILE`
+- [ ] SEC-22 one-line sharing warning after `scan`
+- [ ] Fixture linter test; `npm pack --dry-run` in CI; release workflow with provenance (SC-01, SC-04)
+- [ ] Owner: protect `main`, enable secret scanning + push protection, reserve the npm name, enable Pages and Sponsors
+
+---
+
+# Part 1: design and repository review, 2026-09-29
 
 **Scope.** At the time of this review the repository contains the build spec (`CLAUDE.md`), the verified data-source notes (`docs/data-sources.md`), the README, the licence and `.gitignore`. There is no application code yet, so this is a **design review plus a repository-hygiene review**. Every design finding below is written as a requirement that the implementation must meet and, where possible, as a unit test to add. Re-run the "Code checklist" section against the code once the first slices land.
 

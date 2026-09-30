@@ -19,7 +19,7 @@ Merge this over the current README once v0.1.0 exists. Placeholders in `<…>`. 
 
 ## Try it in five minutes
 
-You need [Node.js](https://nodejs.org) 20 or newer and a BTP login with the **Space Auditor** role (read-only). No cf CLI needed.
+You need [Node.js](https://nodejs.org) 22.12 or newer and a BTP login with the **Space Auditor** role (read-only). No cf CLI needed.
 
 ```
 npx btp-lens

@@ -56,6 +56,37 @@ test('the report works from disk with networking disabled', async ({ page, conte
   expect(errors, 'console and page errors').toEqual([]);
 });
 
+test('carries a Content Security Policy that blocks connections and unbundled scripts', async ({
+  page,
+  context,
+}) => {
+  const { errors } = await isolate(context, page);
+  await page.goto(REPORT);
+  await expect(page.getByText('Top risky apps')).toBeVisible();
+
+  const policy = await page
+    .locator('meta[http-equiv="Content-Security-Policy"]')
+    .getAttribute('content');
+  expect(policy).toContain("connect-src 'none'");
+  expect(policy).toContain("default-src 'none'");
+  expect(policy).toMatch(/script-src 'sha256-[A-Za-z0-9+/=]+'/);
+  expect(policy).not.toMatch(/script-src[^;]*'unsafe-inline'/); // scripts are never unsafe-inline
+
+  // A script injected at runtime (what an XSS would do) must not execute.
+  const ran = await page.evaluate(() => {
+    const script = document.createElement('script');
+    script.textContent = '(window as unknown as { pwned?: boolean }).pwned = true;'.replace(
+      / as unknown as \{ pwned\?: boolean \}/,
+      '',
+    );
+    document.body.append(script);
+    return (window as unknown as { pwned?: boolean }).pwned === true;
+  });
+  expect(ran).toBe(false);
+  // The CSP violation report is expected; anything else is not.
+  expect(errors.filter((e) => !/Content Security Policy/.test(e))).toEqual([]);
+});
+
 test('follows the OS color scheme with the Horizon themes', async ({ page, context }) => {
   const { external } = await isolate(context, page);
   await page.emulateMedia({ colorScheme: 'light' });

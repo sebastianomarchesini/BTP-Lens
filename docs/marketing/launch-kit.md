@@ -2,6 +2,8 @@
 
 Drafts for every channel in `campaign.md`. Replace `<…>` placeholders, keep every claim true of the released version, and keep the non-affiliation line wherever the word SAP appears. Tone: plain, specific, no hype words.
 
+> **Claims check (2026-09-30).** True today: read-only GET-only client with tests, allow-list in one file, offline single-file report with a `connect-src 'none'` CSP, guided mode with company-login sign-in, `doctor`, Space Auditor sufficiency, no telemetry, `APP_NO_RECENT_DEPLOY`. **Not yet true:** the other eight rules, `report --redact`, downloadable executables, "three non-developer testers" (run the sessions first). Edit each draft against this list on launch day.
+
 ---
 
 ## 1. SAP Community blog post (flagship, ~900 words)

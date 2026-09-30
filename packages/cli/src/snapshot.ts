@@ -1,6 +1,7 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ConfigError } from './http/errors.js';
+import { ensurePrivateDir, writePrivateFile } from './io/files.js';
 import { SNAPSHOT_SCHEMA_VERSION, type Snapshot, SnapshotSchema } from './model/snapshot.js';
 
 /** snapshot-20260929T031500Z.json: sortable, one file per scan. */
@@ -9,16 +10,23 @@ export function snapshotFileName(scannedAt: string): string {
   return `snapshot-${stamp}.json`;
 }
 
+/** Larger files are refused before parsing: a snapshot is never this big. */
+export const MAX_SNAPSHOT_BYTES = 256 * 1024 * 1024;
+
 export async function writeSnapshot(snapshot: Snapshot, outDir: string): Promise<string> {
-  await mkdir(outDir, { recursive: true });
+  await ensurePrivateDir(outDir);
   const path = join(outDir, snapshotFileName(snapshot.scannedAt));
-  await writeFile(path, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8');
+  await writePrivateFile(path, `${JSON.stringify(snapshot, null, 2)}\n`);
   return path;
 }
 
 export async function readSnapshot(path: string): Promise<Snapshot> {
   let json: unknown;
   try {
+    const { size } = await stat(path);
+    if (size > MAX_SNAPSHOT_BYTES) {
+      throw new Error(`file is ${size} bytes, the limit is ${MAX_SNAPSHOT_BYTES}`);
+    }
     json = JSON.parse(await readFile(path, 'utf8'));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

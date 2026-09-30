@@ -1,6 +1,6 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ConfigError } from '../http/errors.js';
+import { ensurePrivateDir, writePrivateFile } from '../io/files.js';
 import type { ReportData } from '../model/snapshot.js';
 import { renderAppsCsv, renderFindingsCsv } from './csv.js';
 import { loadReportTemplate, renderHtml } from './html.js';
@@ -36,7 +36,7 @@ export async function writeReports(
   outDir: string,
   options: WriteReportsOptions = {},
 ): Promise<string[]> {
-  await mkdir(outDir, { recursive: true });
+  await ensurePrivateDir(outDir);
   const files: [string, string][] = [];
   for (const format of formats) {
     switch (format) {
@@ -61,7 +61,7 @@ export async function writeReports(
   const written: string[] = [];
   for (const [name, content] of files) {
     const path = join(outDir, name);
-    await writeFile(path, content, 'utf8');
+    await writePrivateFile(path, content);
     written.push(path);
   }
   return written;

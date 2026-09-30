@@ -11,8 +11,8 @@ updates:
         dependency-type: development
       ui5:
         patterns:
-          - "@ui5/*"
-          - "@sap-theming/*"
+          - '@ui5/*'
+          - '@sap-theming/*'
     labels:
       - dependencies
   - package-ecosystem: github-actions

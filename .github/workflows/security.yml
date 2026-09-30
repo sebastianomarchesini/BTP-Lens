@@ -5,7 +5,7 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+    - cron: '17 6 * * 1' # Mondays 06:17 UTC
   workflow_dispatch:
 
 # Least privilege by default; each job elevates only what it needs.

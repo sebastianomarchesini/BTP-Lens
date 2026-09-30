@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t d">
+  <title id="t">BTP Lens</title>
+  <desc id="d">The free, read-only health check for your Cloud Foundry landscape. One command, five minutes, nothing leaves your machine.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#12171f"/>
+      <stop offset="1" stop-color="#1f2a38"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5ad1b4"/>
+      <stop offset="1" stop-color="#2f8f7a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <!-- Lens mark: an aperture ring with a highlight. Deliberately not SAP blue and not a gradient logo shape. -->
+  <g transform="translate(160 320)">
+    <circle r="150" fill="none" stroke="url(#lens)" stroke-width="26"/>
+    <circle r="96" fill="none" stroke="#e8f6f2" stroke-width="6" opacity="0.85"/>
+    <circle r="54" fill="url(#lens)"/>
+    <circle cx="-26" cy="-30" r="14" fill="#e8f6f2" opacity="0.9"/>
+    <path d="M -150 0 A 150 150 0 0 1 0 -150" fill="none" stroke="#e8f6f2" stroke-width="26" stroke-linecap="round" opacity="0.35"/>
+  </g>
+  <g font-family="'72', 'Segoe UI', Helvetica, Arial, sans-serif" fill="#f4f7fa">
+    <text x="380" y="250" font-size="84" font-weight="700">BTP Lens</text>
+    <text x="380" y="320" font-size="34" fill="#c9d4df">The free, read-only health check for your</text>
+    <text x="380" y="366" font-size="34" fill="#c9d4df">Cloud Foundry landscape on SAP BTP.</text>
+    <text x="380" y="450" font-size="30" fill="#5ad1b4" font-weight="600">npx btp-lens</text>
+    <text x="380" y="520" font-size="24" fill="#9fb0c2">read-only  ·  offline report  ·  open source  ·  no telemetry</text>
+    <text x="380" y="590" font-size="18" fill="#7f8fa1">Independent project, not affiliated with SAP SE.</text>
+  </g>
+</svg>

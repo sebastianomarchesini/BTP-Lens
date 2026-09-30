@@ -4,7 +4,21 @@
 
 This plan covers two things the word "sponsor" means: (1) getting the project **seen and used**, and (2) getting it **funded** so it survives its first year. Everything here assumes v0.1.0 ships with guided mode (`docs/ease-of-use.md`) and the security posture in `docs/security-review.md`, because both are the story.
 
-Dates are relative to **L = the day v0.1.0 is on npm**. Today is 2026-09-29; the calendar below assumes L in October 2026, which lines up with the SAP community's autumn events (Devtoberfest, TechEd season, SAP Inside Tracks). If L slips, shift the calendar, not the sequence.
+Dates are relative to **L = the day v0.1.0 is on npm**. Updated 2026-09-30; the calendar below assumes L in the second half of October 2026, which lines up with the SAP community's autumn events (Devtoberfest, TechEd season, SAP Inside Tracks). If L slips, shift the calendar, not the sequence.
+
+### Where we stand (2026-09-30)
+
+| Story we want to tell | State | Evidence |
+|---|---|---|
+| Read-only, GET-only, allow-listed | **Shipped** (slice 1) and re-reviewed; credential endpoints now refused even for GET | `packages/cli/src/net/allowlist.ts`, `docs/security-review.md` |
+| Report cannot phone home | **Shipped**: CSP `connect-src 'none'` in the HTML, Playwright test with networking disabled | `e2e/offline-report.spec.ts` |
+| Five minutes, no flags, for administrators | **Shipped on the development branch**: guided mode, `doctor`, "Start here" panel, no-terminal guide, FAQ | `docs/ease-of-use.md` §8 |
+| Nine rules | **1 of 9** (`APP_NO_RECENT_DEPLOY`); the rest are the next slices | `docs/rules.md` |
+| Public sample report | Workflow ready (`.github/workflows/pages.yml`); needs Pages enabled once | landing page in `docs/marketing/landing.html` |
+| Sponsor button | `FUNDING.yml` and `SPONSORS.md` ready; needs GitHub Sponsors enrolment | — |
+| npm name | **Still unclaimed** on 2026-09-30. Reserve before the first public post. | `npm view btp-lens` |
+
+Every public claim must match the "Shipped" rows. Until the remaining rules land, launch copy says "checks in v0.1 include …" only for what exists, and lists the rest as "coming in the next releases".
 
 ---
 
@@ -74,7 +88,7 @@ Your own position as an SAP Champion is the single biggest asset: the Champions 
 | Sponsors (individual / company) | GitHub Sponsors | 5 / 0 | 20 / 1 | 40 / 3 |
 | Mentions by name in SAP Community content by others | search | 3 | 10 | 25 |
 
-Keep an **evidence log** (`docs/marketing/evidence-log.md`, private if you prefer): date, metric snapshot, links to every talk, article, mention, adoption e-mail and quote. It is what you need for sponsor pitches, award nominations, grant applications and any application where you must document impact.
+Keep an **evidence log** (`docs/marketing/evidence-log.md`, started; keep it private if you prefer): date, metric snapshot, links to every talk, article, mention, adoption e-mail and quote. It is what you need for sponsor pitches, award nominations, grant applications and any application where you must document impact.
 
 ---
 
@@ -82,7 +96,9 @@ Keep an **evidence log** (`docs/marketing/evidence-log.md`, private if you prefe
 
 ### Phase 0: Pre-launch (now → L−1)
 
+0. **Finish the product story first**: the remaining v0.1 rules, `report --redact` (needed so testers can share screenshots), and the three usability sessions. Marketing before that burns the one launch a project gets.
 1. **Reserve the names today**: `btp-lens` on npm (placeholder 0.0.1, see security review §3), the fallback name, a GitHub Discussions space, and the social handles you intend to use.
+1b. **Enable GitHub Pages** (Settings → Pages → Source: GitHub Actions) so `pages.yml` publishes the landing page and the sample report at `https://sebastianomarchesini.github.io/BTP-Lens/`.
 2. **Assets** (§5): logo, social card, demo GIF, sample report on GitHub Pages.
 3. **README** rewritten from `docs/marketing/readme-draft.md`: pitch, `npx` first, permissions table, privacy statement, screenshot, non-affiliation notice, sponsor section.
 4. **Seed testers**: 10 people from the Champions and Mentors network plus 3 non-developers (for the usability sessions in `ease-of-use.md` §7). Ask each for one sentence of feedback you may quote and one redacted screenshot.
@@ -129,10 +145,11 @@ One piece per week, alternating channels, always with a redacted real screenshot
 
 | Asset | Spec | Owner / cost |
 |---|---|---|
-| Logo | A lens/aperture mark, no SAP blue (#0070F2) or SAP logo shapes; SVG plus 512 px PNG; works in Horizon light and dark | Designer, ~USD 100–300, or self-made |
-| Social card | 1280×640, logo, one line, "read-only · offline · open source" | Same |
+| Logo | A lens/aperture mark, no SAP blue (#0070F2) or SAP logo shapes; SVG plus 512 px PNG; works in Horizon light and dark | **Draft done:** `docs/assets/logo.svg` (from the UI); a designer pass is optional |
+| Social card | 1280×640, logo, one line, "read-only · offline · open source" | **Draft done:** `docs/assets/social-card.svg`; export to PNG for LinkedIn and X, which do not accept SVG |
 | Demo GIF | 20 s, guided mode → report opens, on a trial account, redacted names | Terminal recording (asciinema → GIF) |
-| Sample report | The fixture-generated HTML on GitHub Pages: `https://sebastianomarchesini.github.io/BTP-Lens/sample-report.html` | CI job |
+| Sample report | The fixture-generated HTML on GitHub Pages: `https://sebastianomarchesini.github.io/BTP-Lens/sample-report.html` | **Done:** `.github/workflows/pages.yml` + `docs/marketing/landing.html`; owner enables Pages once |
+| Landing page | One screen: tagline, `npx btp-lens`, four proof cards, links, non-affiliation | **Done:** `docs/marketing/landing.html` |
 | Screenshots | Overview, Apps table, one finding card; light and dark | From the sample report |
 | Badges | npm version, license, CI, OpenSSF Scorecard, "read-only: GET-only tested" | README |
 | Slide deck | 12 slides for a 20-minute talk (`launch-kit.md` §9) | Maintainer |

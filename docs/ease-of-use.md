@@ -2,6 +2,8 @@
 
 **Goal.** A person who is not a developer, has never opened a terminal on purpose, and has a normal BTP cockpit login with Space Auditor, gets a readable HTML report of their Cloud Foundry landscape in **under 5 minutes** and without reading any documentation.
 
+> **Status (2026-09-30).** Implemented on this branch: guided mode (`btp-lens` with no arguments: region or pasted endpoint, sign-in with a one-time code or username and password, org pick, confirm, report auto-opened, `--no-open`), `btp-lens doctor`, the "Start here" panel, the no-terminal guide, the FAQ and the administrator text. Still open: the region list needs re-verification against help.sap.com, `report --redact`, the glossary and print stylesheet, `btp-lens reset` and remembering the last scan, single executables (v0.2), and the three usability sessions. Section 8 tracks each item.
+
 This document defines what "basic version" means, who it is for, the exact interaction, and how we measure it. It complements `CLAUDE.md`; where the two differ on UX, this document wins. Nothing here weakens a security or privacy constraint: guided mode uses the same read-only client, the same allow-list and the same Space Auditor defaults.
 
 ---
@@ -89,7 +91,7 @@ Non-developers hit environment problems, not tool problems. `doctor` runs before
 
 | Check | Pass text | Fail text (what to do) |
 |---|---|---|
-| Node.js version | Node 22.14 ✓ | "BTP Lens needs Node.js 20 or newer. Install it from nodejs.org (2 minutes, next-next-finish)." |
+| Node.js version | Node 22.22 ✓ | "BTP Lens needs Node.js 22.12 or newer. Install it from nodejs.org (2 minutes, next-next-finish)." |
 | Reaching the API | api.cf.eu10… ✓ 210 ms | "Cannot reach the API. If you are on a company network, set your proxy: `HTTPS_PROXY=http://proxy.company:8080`. Ask IT for the address." |
 | TLS interception | Certificate trusted ✓ | "Your company inspects HTTPS traffic. Export the company root certificate and set `NODE_EXTRA_CA_CERTS=C:\path\root.cer`. BTP Lens will never skip certificate checks." |
 | Sign-in | Token valid for 11 h ✓ | "Not signed in. Run `npx btp-lens` and choose 'Open a browser'." |
@@ -160,13 +162,13 @@ No telemetry (constraint 3), so we measure by hand:
 
 Hand these to whoever implements v0.1:
 
-- [ ] `btp-lens` with no subcommand in a TTY starts the wizard (§3); in a non-TTY it prints usage and exits 2.
-- [ ] Sign-in options: passcode (SSO), existing cf CLI login, username/password. Passcode flow verified against the cf CLI source and recorded in `data-sources.md`.
-- [ ] Region convenience list in one JSON file with a verification date; pasted URL wins.
-- [ ] `btp-lens doctor` with the six checks in §3.2.
-- [ ] The ten hand-written error messages in §3.3, each with a test.
-- [ ] Output in `./btp-lens-reports/<timestamp>/`, report auto-opened, `--no-open` to disable.
-- [ ] "Start here" panel, "What this means" sentences, print stylesheet, glossary, honest skipped states in the UI (§5).
+- [x] `btp-lens` with no subcommand in a TTY starts the wizard (§3); in a non-TTY it prints usage and exits 2.
+- [x] Sign-in options: passcode (SSO), existing cf CLI login, username/password. Passcode flow verified against the cf CLI source and recorded in `data-sources.md` §1.1.
+- [x] Region convenience list in one module with a verification date; pasted URL wins. 🟡 Re-verify the list against help.sap.com before 0.1.0.
+- [x] `btp-lens doctor` with Node.js, API reachability, TLS trust, cf CLI login and output folder. Open: the role check (needs a signed-in session; guided mode reports it instead).
+- [ ] The ten hand-written error messages in §3.3, each with a test. Done: no network, proxy needed, TLS interception, wrong API URL, no orgs visible, no spaces visible, output folder not writable. Open: no Node (cannot be caught from Node itself; covered by the guide), expired login wording, PowerShell execution policy.
+- [x] Output in `./btp-lens-reports/<timestamp>/`, report auto-opened, `--no-open` to disable.
+- [ ] UI (§5): done "Start here" panel and honest skipped states. Open: "What this means" per finding, print stylesheet, glossary.
 - [ ] `report --redact` (also SEC-23).
-- [ ] `docs/getting-started-no-terminal.md`, `docs/faq.md`, and the administrator-facing wording in `docs/permissions.md`.
+- [x] `docs/getting-started-no-terminal.md`, `docs/faq.md`, and the administrator-facing wording in `docs/permissions.md`. Screenshots for the guide still to be taken on Windows and macOS.
 - [ ] Three usability sessions recorded as issues before tagging 0.1.0.

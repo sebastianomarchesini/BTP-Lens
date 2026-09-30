@@ -5,10 +5,16 @@ import {
   type ReportConfig,
   type ScanConfig,
   failThreshold,
+  parseApiUrl,
   parseReportConfig,
   parseScanConfig,
 } from './config.js';
+import { formatDoctor, runDoctor } from './doctor.js';
+import { type OpenInBrowser, openInBrowser } from './guided/open.js';
+import { type Prompter, TerminalPrompter } from './guided/prompt.js';
+import { runWizard } from './guided/wizard.js';
 import type { FetchLike } from './http/httpClient.js';
+import { sanitizeOutput } from './io/redact.js';
 import { meetsThreshold } from './model/severity.js';
 import type { ReportData } from './model/snapshot.js';
 import { writeReports } from './reporters/index.js';
@@ -21,6 +27,14 @@ export interface CliIo {
   stdout: (text: string) => void;
   stderr: (text: string) => void;
   env: NodeJS.ProcessEnv;
+  /** Whether a person is at the keyboard; decides if no arguments start guided mode. */
+  isTTY?: boolean;
+  /** Working directory for guided mode and doctor (default: process.cwd()). */
+  cwd?: string;
+  /** Injected in tests: scripted answers instead of the terminal. */
+  prompter?: Prompter;
+  /** Injected in tests: never open a browser. */
+  open?: OpenInBrowser | null;
   /** Injected in tests. */
   fetch?: FetchLike;
   /** Injected in tests. */
@@ -83,6 +97,33 @@ async function runReport(config: ReportConfig, io: CliIo): Promise<number> {
   return exitCodeFor(data, config.failOn);
 }
 
+async function runGuided(io: CliIo, open: boolean): Promise<number> {
+  return runWizard({
+    prompter: io.prompter ?? new TerminalPrompter(),
+    env: io.env,
+    cwd: io.cwd ?? process.cwd(),
+    open: open ? (io.open === undefined ? openInBrowser : io.open) : null,
+    fetch: io.fetch,
+    now: io.now,
+  });
+}
+
+async function runDoctorCommand(io: CliIo, options: Record<string, unknown>): Promise<number> {
+  const api = typeof options.api === 'string' ? parseApiUrl(options.api) : undefined;
+  const checks = await runDoctor({
+    api,
+    env: io.env,
+    cwd: io.cwd ?? process.cwd(),
+    fetch: io.fetch,
+    now: io.now ? () => io.now!().getTime() : undefined,
+  });
+  io.stdout(formatDoctor(checks));
+  return checks.every((c) => c.ok) ? EXIT.ok : EXIT.error;
+}
+
+const GUIDED_HINT =
+  'No arguments: guided mode starts when a person is at the terminal. In scripts, use `btp-lens scan --api <url> --org <name>`.\n';
+
 function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
   const program = new Command()
     .name(TOOL_NAME)
@@ -123,6 +164,22 @@ function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
     });
 
   program
+    .command('guided')
+    .description('answer four questions and get a report (what `btp-lens` with no arguments does)')
+    .option('--no-open', 'do not open the report in the browser')
+    .action(async (options: { open: boolean }) => {
+      setExit(await runGuided(io, options.open));
+    });
+
+  program
+    .command('doctor')
+    .description('check Node.js, network, certificates, login and output folder, with plain fixes')
+    .option('--api <url>', 'CF API endpoint to test (default: the cf CLI target)')
+    .action(async (options: Record<string, unknown>) => {
+      setExit(await runDoctorCommand(io, options));
+    });
+
+  program
     .command('version')
     .description('print the version')
     .action(() => {
@@ -133,12 +190,27 @@ function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
 }
 
 /** Runs the CLI and returns the exit code: 0 ok, 1 findings at --fail-on, 2 tool error. */
-export async function main(argv: string[], io: CliIo): Promise<number> {
+export async function main(argv: string[], rawIo: CliIo): Promise<number> {
+  // Every byte that reaches the terminal is stripped of escape sequences and
+  // anything shaped like a token (docs/security-review.md SEC-04, SEC-17).
+  const io: CliIo = {
+    ...rawIo,
+    stdout: (text) => rawIo.stdout(sanitizeOutput(text)),
+    stderr: (text) => rawIo.stderr(sanitizeOutput(text)),
+  };
   let exitCode: number = EXIT.ok;
   const program = buildProgram(io, (code) => {
     exitCode = code;
   });
   try {
+    if (argv.length === 0) {
+      const interactive =
+        io.isTTY ?? (process.stdin.isTTY === true && process.stdout.isTTY === true);
+      if (interactive) return await runGuided(io, true);
+      io.stderr(GUIDED_HINT);
+      program.outputHelp({ error: true });
+      return EXIT.error;
+    }
     await program.parseAsync(argv, { from: 'user' });
     return exitCode;
   } catch (error) {
