@@ -1,0 +1,23 @@
+{
+  "pagination": { "total_results": 2, "total_pages": 1, "next": null, "previous": null },
+  "resources": [
+    {
+      "guid": "5pace000-0000-4000-8000-000000000dev",
+      "created_at": "2023-01-10T08:05:00Z",
+      "updated_at": "2023-01-10T08:05:00Z",
+      "name": "dev",
+      "relationships": { "organization": { "data": { "guid": "0a1b2c3d-0000-4000-8000-000000000001" } }, "quota": { "data": null } },
+      "metadata": { "labels": {}, "annotations": {} },
+      "links": {}
+    },
+    {
+      "guid": "5pace000-0000-4000-8000-00000000prod",
+      "created_at": "2023-01-10T08:06:00Z",
+      "updated_at": "2023-01-10T08:06:00Z",
+      "name": "prod",
+      "relationships": { "organization": { "data": { "guid": "0a1b2c3d-0000-4000-8000-000000000001" } }, "quota": { "data": null } },
+      "metadata": { "labels": {}, "annotations": {} },
+      "links": {}
+    }
+  ]
+}

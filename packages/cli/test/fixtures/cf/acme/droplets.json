@@ -1,0 +1,312 @@
+{
+  "pagination": {
+    "total_results": 7,
+    "total_pages": 1,
+    "next": null,
+    "previous": null
+  },
+  "resources": [
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000001",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "checksum": {
+        "type": "sha256",
+        "value": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "buildpacks": [
+        {
+          "name": "nodejs_buildpack",
+          "detect_output": "nodejs",
+          "buildpack_name": "nodejs",
+          "version": "1.8.40"
+        }
+      ],
+      "stack": "cflinuxfs4",
+      "image": null,
+      "created_at": "2026-07-20T10:00:00Z",
+      "updated_at": "2026-07-20T10:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000001"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000002",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "checksum": {
+        "type": "sha256",
+        "value": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "buildpacks": [
+        {
+          "name": "nodejs_buildpack",
+          "detect_output": "nodejs",
+          "buildpack_name": "nodejs",
+          "version": "1.8.21"
+        }
+      ],
+      "stack": "cflinuxfs4",
+      "image": null,
+      "created_at": "2025-07-01T09:00:00Z",
+      "updated_at": "2025-07-01T09:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000002"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000002"
+        }
+      }
+    },
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000003",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "checksum": {
+        "type": "sha256",
+        "value": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "buildpacks": [
+        {
+          "name": "sap_java_buildpack",
+          "detect_output": "sap_java_buildpack",
+          "buildpack_name": "sap_java_buildpack",
+          "version": "1.84.0"
+        }
+      ],
+      "stack": "cflinuxfs3",
+      "image": null,
+      "created_at": "2024-03-15T08:00:00Z",
+      "updated_at": "2024-03-15T08:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000003"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000003"
+        }
+      }
+    },
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000004",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "checksum": {
+        "type": "sha256",
+        "value": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "buildpacks": [
+        {
+          "name": "sap_java_buildpack",
+          "detect_output": "sap_java_buildpack",
+          "buildpack_name": "sap_java_buildpack",
+          "version": "1.92.0"
+        }
+      ],
+      "stack": "cflinuxfs4",
+      "image": null,
+      "created_at": "2026-04-02T12:00:00Z",
+      "updated_at": "2026-04-02T12:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000004"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000004"
+        }
+      }
+    },
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000005",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "checksum": {
+        "type": "sha256",
+        "value": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "buildpacks": [
+        {
+          "name": "staticfile_buildpack",
+          "detect_output": "staticfile",
+          "buildpack_name": "staticfile",
+          "version": "1.6.3"
+        }
+      ],
+      "stack": "cflinuxfs4",
+      "image": null,
+      "created_at": "2025-08-20T12:00:00Z",
+      "updated_at": "2025-08-20T12:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000005"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000005"
+        }
+      }
+    },
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000006",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "buildpack",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "checksum": {
+        "type": "sha256",
+        "value": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "buildpacks": [
+        {
+          "name": "https://deploy-bot:FAKE-POISON-TOKEN-123@github.com/acme/custom-buildpack.git#v1.2",
+          "detect_output": "custom",
+          "buildpack_name": "custom",
+          "version": "1.2.0"
+        }
+      ],
+      "stack": "cflinuxfs4",
+      "image": null,
+      "created_at": "2026-09-01T00:00:00Z",
+      "updated_at": "2026-09-01T00:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000006"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000006"
+        }
+      }
+    },
+    {
+      "guid": "d20d0000-0000-4000-8000-000000000007",
+      "state": "STAGED",
+      "error": null,
+      "lifecycle": {
+        "type": "docker",
+        "data": {}
+      },
+      "execution_metadata": "{\"cmd\":\"POISON-execution-metadata\"}",
+      "process_types": {
+        "web": "node server.js --db-password=POISON_hunter2"
+      },
+      "image": "registry.example.org/acme/worker:1.4",
+      "created_at": "2026-09-09T00:00:00Z",
+      "updated_at": "2026-09-09T00:00:00Z",
+      "relationships": {
+        "app": {
+          "data": {
+            "guid": "a99a0000-0000-4000-8000-000000000007"
+          }
+        }
+      },
+      "metadata": {
+        "labels": {},
+        "annotations": {}
+      },
+      "links": {
+        "self": {
+          "href": "https://api.cf.example.org/v3/droplets/d20d0000-0000-4000-8000-000000000007"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+BTP Lens
+Copyright 2026 Sebastiano Marchesini and the BTP Lens contributors
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+BTP Lens is an independent open-source project. It is not affiliated with,
+endorsed by or sponsored by SAP SE or its affiliates. SAP, SAP BTP, SAPUI5 and
+Fiori are trademarks or registered trademarks of SAP SE in Germany and other
+countries.
+
+Third-party software in the HTML report
+---------------------------------------
+The HTML report is a single file that bundles third-party open-source
+software. Every generated report embeds the complete list of bundled packages
+with their license texts in a comment at the top of the file. The npm package
+ships the same list as dist/THIRD_PARTY_LICENSES.md.
+
+Licensing check (2026-09-29): the report bundles 42 packages. All of them are
+licensed under Apache-2.0, MIT, ISC or BSD-3-Clause, and these licenses allow
+redistribution in a single-file report when the license notices are included.
+None of the Apache-2.0 packages ships a NOTICE file that needs to be carried
+over. The bundled packages include:
+
+- UI5 Web Components, UI5 Web Components for React and their charts, icons,
+  localization and theming packages (Apache-2.0)
+- SAP Theming Base Content, including the "72" font files (Apache-2.0)
+- React, React DOM, React Router, TanStack Query and TanStack Virtual (MIT)
+- Recharts and its dependencies (MIT); D3 modules and internmap (ISC);
+  victory-vendor (MIT AND ISC)
+- lit-html (BSD-3-Clause)

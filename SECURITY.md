@@ -20,13 +20,15 @@ Include the version (`btp-lens version`), the command you ran with any secrets r
 
 ## Scope
 
-In scope:
+These properties are security guarantees. Anything that breaks one is in scope:
 
-- The `btp-lens` npm package and this repository's code and workflows.
-- Any request to a host that is not on the documented allow-list (`docs/data-sources.md` §6), or any non-GET request to a Cloud Foundry API.
-- Leakage of tokens, environment variable values, service credentials, user names or e-mails into terminal output, logs or reports.
-- Script execution or formula execution from a generated HTML, CSV or SARIF report.
-- Path traversal, zip-slip or unsafe parsing in the `sbom` command.
+- **Read-only:** no request other than `GET` reaches the Cloud Foundry API.
+- **Egress:** no request goes to a host outside the allow-list (`packages/cli/src/net/allowlist.ts`, documented in `docs/data-sources.md` §6), and no credentials go to any host other than the CF API and UAA.
+- **No secrets or personal data** (tokens, environment variable values, service credentials, user names, e-mails) in snapshots, reports, logs or console output.
+- **Inert outputs:** the HTML report makes no network request when opened, data from the scanned landscape cannot inject script into it, and CSV and SARIF outputs cannot execute formulas or code in the tools that open them.
+- **Safe parsing** in the `sbom` command: no path traversal, zip-slip, XML entity expansion or unbounded decompression.
+
+Also in scope: the `btp-lens` npm package and this repository's code and workflows.
 
 Out of scope:
 
