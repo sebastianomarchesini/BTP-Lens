@@ -2,7 +2,7 @@
 
 BTP Lens is free and independent. These people and companies help keep it maintained. Thank you.
 
-Sponsorship never influences what the tool reports, which checks exist, or how findings are ranked. It does not imply any endorsement by SAP SE.
+**The promise.** BTP Lens is open source under Apache-2.0, all of it, forever: there is no paid tier, no gated feature and no private build. Sponsorship pays for maintainer time and the costs listed in the campaign plan, nothing else. It never influences what the tool reports, which checks exist, or how findings are ranked, and it does not buy a vote on the public roadmap. It does not imply any endorsement by SAP SE. Income and spend are summarised every quarter in `docs/marketing/evidence-log.md`.
 
 ## Founding sponsors
 

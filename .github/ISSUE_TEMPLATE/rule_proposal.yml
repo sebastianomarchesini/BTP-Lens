@@ -1,0 +1,54 @@
+name: Rule proposal
+description: Propose a new check. Anyone can; you do not need to write code.
+labels: [rule-proposal]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Rules are how BTP Lens gets smarter, and the community owns the catalogue. Describe the problem you want to catch;
+        if you also want to implement it, `CONTRIBUTING.md` has the recipe (one analyzer file, one test, one section in `docs/rules.md`).
+        Please do not paste real app names, hostnames or tokens.
+  - type: input
+    id: id
+    attributes:
+      label: Proposed rule id
+      description: UPPER_SNAKE_CASE, like the existing ones in docs/rules.md
+      placeholder: ROUTE_WITHOUT_TLS
+    validations:
+      required: true
+  - type: textarea
+    id: detects
+    attributes:
+      label: What should it detect, and why does it matter?
+      description: One paragraph a manager would understand, then the technical condition.
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: Which data does it need?
+      description: Which CF v3 endpoint or public source, which fields, and which role can read them (Space Auditor is the goal). See docs/data-sources.md.
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Suggested severity
+      options: [critical, high, medium, low, info]
+    validations:
+      required: true
+  - type: textarea
+    id: remediation
+    attributes:
+      label: What should the finding tell people to do?
+      description: The concrete next step, and a link to documentation if there is one.
+    validations:
+      required: true
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Fits the project's constraints
+      options:
+        - label: It only needs GET requests and no new outbound host, or I have said which host and why.
+        - label: It does not need user names, e-mails, environment variable values or credentials.
+        - label: I would like to implement it myself (a maintainer will help).

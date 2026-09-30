@@ -2,7 +2,7 @@
 
 **Working name:** BTP Lens. **One line:** *The free, read-only health check for your SAP BTP Cloud Foundry landscape. One command, five minutes, nothing leaves your machine.*
 
-This plan covers two things the word "sponsor" means: (1) getting the project **seen and used**, and (2) getting it **funded** so it survives its first year. Everything here assumes v0.1.0 ships with guided mode (`docs/ease-of-use.md`) and the security posture in `docs/security-review.md`, because both are the story.
+**This is an open-source project, and the plan is written as one.** The goal is not "customers" but a community that uses, trusts, improves and eventually co-maintains BTP Lens. Marketing here means three things, in this order: (1) getting the project **used and contributed to**, (2) getting it **seen** by the people who need it, and (3) getting it **funded** enough to stay maintained, without ever selling access to a feature or a finding. §0 sets the rules; everything else follows from them. Everything here assumes v0.1.0 ships with guided mode (`docs/ease-of-use.md`) and the security posture in `docs/security-review.md`, because both are the story.
 
 Dates are relative to **L = the day v0.1.0 is on npm**. Updated 2026-09-30; the calendar below assumes L in the second half of October 2026, which lines up with the SAP community's autumn events (Devtoberfest, TechEd season, SAP Inside Tracks). If L slips, shift the calendar, not the sequence.
 
@@ -22,6 +22,22 @@ Every public claim must match the "Shipped" rows. Until the remaining rules land
 
 ---
 
+## 0. Open source is the strategy, not a checkbox
+
+These rules are binding for every post, tier, asset and decision below. When something in this plan conflicts with them, the rules win.
+
+1. **Everything stays free and open.** Apache-2.0 for all of it: every rule, every report format, guided mode, server mode when it comes. There is no "pro" tier, no gated feature, no enterprise fork. The only thing sponsorship buys is maintainer time.
+2. **Build in public.** Roadmap (`docs/roadmap.md`), decisions (`docs/data-sources.md` §7), the security review, the evidence log and the funding numbers are all in the repository. Announcements link to issues and pull requests, not to landing pages.
+3. **Contributions beat broadcasts.** A merged pull request from a stranger is worth more than a thousand impressions. Every metric in §3 that counts people (contributors, rule proposals, answered questions) outranks every metric that counts views.
+4. **The community owns the rule catalogue.** Rules are how the tool gets smarter. Anyone can propose one with the "Rule proposal" issue template, and the maintainer's job is to make adding a rule a one-file, one-test, one-doc change (see `CONTRIBUTING.md`).
+5. **Governance is written down before it is needed.** Who decides what, how someone becomes a maintainer, and what happens if the maintainer disappears: `docs/governance.md`. Companies adopt tools with a bus factor above one; contributors join projects that will let them in.
+6. **A Code of Conduct, enforced.** `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1). Non-developers asking basic questions are the audience, not a nuisance.
+7. **Sponsorship is transparent and never buys influence.** Public tiers, public sponsor list, public funding goals, and a written promise in `SPONSORS.md` that money never softens a check or hides a finding.
+8. **No dark patterns.** No telemetry, no "sign up to see the sample", no newsletter gate, no mailing list scraped from issues, no astroturfed reviews, no SAP branding or implied endorsement.
+9. **Credit generously.** Contributors in the release notes and the changelog by name (if they wish), testers quoted with permission, the "one rule, explained" posts co-authored with whoever wrote the rule.
+
+The word "open source" appears in the first sentence of every launch post, and the link goes to the repository, never to a brochure.
+
 ## 1. Positioning
 
 ### The problem, in the words of the buyer
@@ -36,7 +52,7 @@ Every public claim must match the "Shipped" rows. Until the remaining rules land
 - **No telemetry, no account, no SaaS.** The only outbound hosts are your CF API, OSV.dev, endoflife.date and the UI5 version feed, listed in one file.
 - **Open source, Apache-2.0**, independent, not affiliated with SAP.
 
-### Four message pillars (use at least two in every piece of content)
+### Five message pillars (use at least two in every piece of content; "Open" is always one of them in launch week)
 
 | Pillar | Proof we can point at |
 |---|---|
@@ -44,6 +60,7 @@ Every public claim must match the "Shipped" rows. Until the remaining rules land
 | **Speed**: five minutes from `npx` to report | The guided-mode demo GIF, timed in the usability sessions |
 | **Actionable**: every finding has a remediation and a link | `docs/rules.md`, screenshots of a finding card |
 | **For everyone**: admins and managers, not only developers | Guided mode, the "Start here" panel, the no-terminal getting-started guide |
+| **Open**: Apache-2.0, built in public, yours to extend | The repository itself, `docs/roadmap.md`, `docs/governance.md`, the "Rule proposal" template, contributors named in every release |
 
 ### Objections and answers
 
@@ -77,13 +94,20 @@ Your own position as an SAP Champion is the single biggest asset: the Champions 
 
 ## 3. Goals and metrics (no telemetry, so these are the only numbers)
 
+Community metrics come first and decide whether the plan is working; reach metrics come second and only explain why.
+
 | Metric | Source | L+30 | L+90 | L+180 |
 |---|---|---|---|---|
+| **External contributors (merged PR)** | GitHub | 2 | 6 | 12 |
+| **Rule proposals from others** (issue template) | GitHub | 3 | 10 | 20 |
+| **Rules contributed by others** (merged) | GitHub | 0 | 2 | 5 |
+| **Questions answered by someone other than the maintainer** | Discussions | 0 | 5 | 20 |
+| **Good-first-issues closed by first-time contributors** | GitHub | 1 | 5 | 12 |
+| **Second maintainer** with merge rights | governance.md | — | — | 1 |
 | GitHub stars | GitHub | 150 | 500 | 1,000 |
 | npm weekly downloads | npmjs.com | 200 | 800 | 2,000 |
 | Unique visitors to the repo | GitHub Insights → Traffic | 2,000 | 8,000 | 15,000 |
 | Discussions threads by people other than the maintainer | GitHub | 15 | 60 | 120 |
-| External contributors (merged PR) | GitHub | 2 | 6 | 12 |
 | Talks and podcast appearances | log | 1 | 4 | 8 |
 | Sponsors (individual / company) | GitHub Sponsors | 5 / 0 | 20 / 1 | 40 / 3 |
 | Mentions by name in SAP Community content by others | search | 3 | 10 | 25 |
@@ -98,6 +122,7 @@ Keep an **evidence log** (`docs/marketing/evidence-log.md`, started; keep it pri
 
 0. **Finish the product story first**: the remaining v0.1 rules, `report --redact` (needed so testers can share screenshots), and the three usability sessions. Marketing before that burns the one launch a project gets.
 1. **Reserve the names today**: `btp-lens` on npm (placeholder 0.0.1, see security review §3), the fallback name, a GitHub Discussions space, and the social handles you intend to use.
+1a. **Make the repository contributor-ready** (done on the development branch): `CODE_OF_CONDUCT.md`, a `CONTRIBUTING.md` with a 15-minute first contribution and the recipe for adding a rule, `docs/roadmap.md`, `docs/governance.md`, the "Rule proposal" issue template. Then seed **ten `good first issue` items** from `docs/roadmap.md` §"Good first issues", each with the file to touch and the test to add, and enable Discussions with categories "Q&A", "Show your report (redacted)", "Rule ideas".
 1b. **Enable GitHub Pages** (Settings → Pages → Source: GitHub Actions) so `pages.yml` publishes the landing page and the sample report at `https://sebastianomarchesini.github.io/BTP-Lens/`.
 2. **Assets** (§5): logo, social card, demo GIF, sample report on GitHub Pages.
 3. **README** rewritten from `docs/marketing/readme-draft.md`: pitch, `npx` first, permissions table, privacy statement, screenshot, non-affiliation notice, sponsor section.
@@ -130,13 +155,16 @@ One piece per week, alternating channels, always with a redacted real screenshot
 - **Live sessions**: a CodeJam-style 45-minute "scan your trial account with me" session, recorded.
 - **Integrations**: GitHub Action (v0.2) launch post targeted at platform teams.
 - **Community answers**: search SAP Community Q&A and Reddit weekly for "cflinuxfs3", "Node.js end of life BTP", "buildpack outdated" and answer with the tool where it genuinely helps. Never spam; one link, real help.
-- **Sponsor pitch** to three consultancies and three product companies that showed up in Discussions (§6).
+- **Contributor care**: reply to every first pull request within 24 hours, pair on it if needed, merge generously and polish afterwards. A first-timer who gets a kind review comes back; one who waits two weeks does not.
+- **"Add your own rule" post** at L+30: the recipe from `CONTRIBUTING.md`, with a real community-proposed rule as the example.
+- **Sponsor pitch** to three consultancies and three product companies that showed up in Discussions (§6), always after they have contributed or adopted, never cold.
 
 ### Phase 3: Compounding (L+90 → L+365)
 
 - Propose sessions to SAP TechEd, SAP Inside Tracks, reBTP-style community conferences, and DSAG/ASUG user groups where you have access.
 - Yearly "State of BTP CF landscapes" report from opt-in aggregate statistics (roadmap "Later" item). This is the single most linkable asset the project can produce and the strongest reason for companies to sponsor.
-- Contributor programme: label `good first issue` weekly, a `CONTRIBUTING.md` that a first-timer can follow in 15 minutes, a monthly community call once there are 5 regular contributors.
+- Contributor programme: label `good first issue` weekly, keep the 15-minute path in `CONTRIBUTING.md` green, a monthly community call once there are 5 regular contributors, and offer maintainer rights (per `docs/governance.md`) to the first person who has sustained contributions for three months. The project's success condition is that it survives its founder.
+- Apply for open-source support programmes that fit (GitHub Sponsors matching where available, OpenSSF resources, cloud credits for CI); record each in the evidence log.
 - Kyma support (v0.3) opens the second half of the BTP audience.
 
 ---
@@ -159,9 +187,9 @@ One piece per week, alternating channels, always with a redacted real screenshot
 
 ## 6. Sponsorship programme
 
-### Why anyone would sponsor
+### What sponsorship is, and is not
 
-Consultancies and product companies get: a tool their clients trust because it is independent, a public association with "we care about BTP hygiene", and influence on the roadmap. Individuals get: a thank-you and the good feeling. Be explicit that sponsorship **never** buys a check being softened or a finding being hidden, and never implies SAP endorsement.
+Sponsorship funds **maintainer time** on an open-source project. It does not buy features, priority fixes, private builds, early access, or a say in what the tool reports. The roadmap call in the higher tiers is a conversation, not a vote; the roadmap stays public and the maintainers decide. Consultancies and product companies get a tool their clients trust *because* it is independent, and a public "we fund the commons we use" association. Individuals get a thank-you. Be explicit that sponsorship **never** buys a check being softened or a finding being hidden, and never implies SAP endorsement. Money is reported in the evidence log once a quarter: what came in, what it paid for.
 
 ### Tiers (GitHub Sponsors; add Open Collective when a company needs an invoice)
 
@@ -169,8 +197,8 @@ Consultancies and product companies get: a tool their clients trust because it i
 |---|---|---|
 | Supporter | USD 5 | Name in `SPONSORS.md`, sponsor badge |
 | Backer | USD 25 | Above, plus name in the release notes |
-| Team | USD 150 | Small logo in the README sponsors row, priority on bug triage (not on fixes) |
-| Landscape sponsor | USD 500 | Logo in README and on the sample-report page, a quarterly 30-minute roadmap call, named in the yearly report |
+| Team | USD 150 | Small logo in the README sponsors row |
+| Landscape sponsor | USD 500 | Logo in README and on the sample-report page, a quarterly 30-minute conversation about the public roadmap, named in the yearly report |
 | Founding sponsor (first three only) | USD 1,500 | Above, plus "founding sponsor" for life, one workshop per year for their team |
 
 ### Funding goals, stated publicly
@@ -178,6 +206,10 @@ Consultancies and product companies get: a tool their clients trust because it i
 1. USD 300/month: code-signing certificate and domain, so non-developers can double-click an executable without warnings.
 2. USD 1,000/month: one day per week of maintainer time; monthly releases guaranteed.
 3. USD 3,000/month: a second maintainer; v0.3 server mode on a fixed date.
+
+### Prefer the open-source channels
+
+Use **GitHub Sponsors** first (no fees for the project, visible on the repository). Add **Open Collective** when a company needs an invoice: its ledger is public by design, which fits §0.7. Do not set up a private bank-transfer path.
 
 ### Non-monetary sponsorship
 
@@ -219,6 +251,9 @@ Rules 6–9 continue the series in weeks 13–20.
 - Answer every issue and Discussion within 48 hours during the first 90 days.
 - Every claim in a post must be true of the released version, not the roadmap. Roadmap items are labelled as such.
 - Numbers come from the evidence log, with a date.
+- Every launch post says "open source, Apache-2.0" in its first sentence and links the repository.
+- Contributors are credited by name in the post about the thing they built. Never present community work as the maintainer's.
+- When someone forks or builds a competing tool, link to it and wish them well. Open source is not a zero-sum market.
 
 ---
 

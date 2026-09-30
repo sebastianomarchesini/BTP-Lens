@@ -1,6 +1,6 @@
 # BTP Lens
 
-**A read-only health and security scanner for Cloud Foundry landscapes on SAP BTP.** It is free, open source, and runs on your machine.
+**A read-only health and security scanner for Cloud Foundry landscapes on SAP BTP.** Open source under Apache-2.0, free for everyone, built in public, and it runs on your machine.
 
 Point BTP Lens at a Cloud Foundry org. With nothing more than the **Space Auditor** role, it inventories every app, flags stale deployments, end-of-life runtimes, outdated buildpacks and libraries, known vulnerabilities and risky configuration, and writes an **offline HTML report** plus JSON, CSV and SARIF.
 
@@ -121,7 +121,9 @@ The repository is an npm workspaces monorepo:
 - `packages/ui` holds the React and UI5 Web Components report.
 - `docs/` holds the verified data sources, rules, permissions and privacy notes.
 
-Contributions need a signed CLA; see [CONTRIBUTING.md](CONTRIBUTING.md). To report a vulnerability, see [SECURITY.md](SECURITY.md).
+## Contributing and community
+
+BTP Lens is built in public. The [roadmap](docs/roadmap.md) and [governance](docs/governance.md) are in the repository, rules can be proposed by anyone with the "Rule proposal" issue template, and [CONTRIBUTING.md](CONTRIBUTING.md) has a 15-minute first contribution and the recipe for adding a rule. Non-developers are welcome: testing guided mode, answering questions in Discussions and improving the docs count as much as code. Please read the [Code of Conduct](CODE_OF_CONDUCT.md). Contributions need a signed CLA. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## Support the project
 

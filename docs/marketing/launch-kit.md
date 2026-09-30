@@ -19,7 +19,7 @@ Drafts for every channel in `campaign.md`. Replace `<…>` placeholders, keep ev
 > Every BTP landscape I have worked on had the same unanswered questions. Which apps still run a Node.js version that no longer gets security fixes? Which ones sit on cflinuxfs3? Which were deployed once in 2023 and never touched again? Which ship a dependency with a known CVE? The cockpit shows one space at a time, and the scripts people write against the CF API are never something a security team wants to see run with production credentials.
 >
 > **What BTP Lens is**
-> BTP Lens is a free, open-source command-line tool. You run it on your own machine with your own login, it reads your Cloud Foundry landscape, and it writes an HTML report you can open offline, plus JSON, CSV and SARIF. It is read-only by construction: the HTTP client can only issue GET requests to the CF API, and a unit test proves it. It needs the Space Auditor role. Nothing is sent anywhere except your CF API and three public data sources (OSV.dev for CVEs, endoflife.date for runtime dates, the SAPUI5 version feed), and the list of allowed hosts is one file in the repository.
+> BTP Lens is an open-source (Apache-2.0) command-line tool, built in public: the roadmap, the governance and the security review are in the repository, and anyone can propose a check. You run it on your own machine with your own login, it reads your Cloud Foundry landscape, and it writes an HTML report you can open offline, plus JSON, CSV and SARIF. It is read-only by construction: the HTTP client can only issue GET requests to the CF API, and a unit test proves it. It needs the Space Auditor role. Nothing is sent anywhere except your CF API and three public data sources (OSV.dev for CVEs, endoflife.date for runtime dates, the SAPUI5 version feed), and the list of allowed hosts is one file in the repository.
 >
 > **Five minutes, no flags**
 > `npx btp-lens` starts a guided mode: paste your API endpoint from the cockpit, sign in with your company account in the browser, pick the org, and the report opens. I tested it with three colleagues who are not developers; all three had a report open in under five minutes. (Insert the demo GIF.)
@@ -44,7 +44,7 @@ Drafts for every channel in `campaign.md`. Replace `<…>` placeholders, keep ev
 
 > Which of your BTP Cloud Foundry apps are running on borrowed time?
 >
-> I built BTP Lens to answer that in five minutes: a free, open-source, read-only scanner. One command, your own login, an offline HTML report.
+> I built BTP Lens to answer that in five minutes: an open-source (Apache-2.0), read-only scanner. No paid tier, built in public, rules proposed by the community. One command, your own login, an offline HTML report.
 >
 > ✔ Read-only: the client can only send GET requests, and a test proves it
 > ✔ Works with the Space Auditor role
