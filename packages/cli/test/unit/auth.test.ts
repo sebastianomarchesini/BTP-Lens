@@ -4,7 +4,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   CfCliTokenProvider,
+  UaaSessionTokenProvider,
   jwtExpiryMs,
+  passcodeGrant,
+  passwordGrant,
   resolveTokenProvider,
   sameEndpoint,
 } from '../../src/http/auth.js';
@@ -211,5 +214,55 @@ describe('resolveTokenProvider', () => {
       () => NOW,
     );
     await expect(provider.getToken()).rejects.toThrow(/HTTP 401 \(invalid_token\)/);
+  });
+});
+
+describe('UaaSessionTokenProvider (guided mode)', () => {
+  it('exchanges a one-time passcode once, then refreshes with the refresh token', async () => {
+    const fake = new FakeFetch().on('POST', 'uaa.cf.example.org/oauth/token', (call) => {
+      const form = new URLSearchParams(call.body);
+      if (form.get('grant_type') === 'password' && form.get('passcode') === 'K7Q2ZX') {
+        return jsonResponse({ access_token: jwt(NOW / 1000 + 10), refresh_token: 'r1' });
+      }
+      if (form.get('grant_type') === 'refresh_token' && form.get('refresh_token') === 'r1') {
+        return jsonResponse({ access_token: jwt(NOW / 1000 + 7200), refresh_token: 'r2' });
+      }
+      return jsonResponse({ error: 'invalid_grant' }, 401);
+    });
+    const provider = new UaaSessionTokenProvider(
+      http(fake),
+      tokenUrl,
+      'one-time passcode',
+      passcodeGrant('K7Q2ZX'),
+      () => NOW,
+    );
+    const first = await provider.getToken();
+    // Expires within the 60 s margin, so the next call refreshes.
+    const second = await provider.getToken();
+    expect(first).not.toBe(second);
+    expect(fake.calls).toHaveLength(2);
+    // The cf CLI's public client, id "cf" with an empty secret.
+    expect(fake.calls[0]?.headers.authorization).toBe(
+      `Basic ${Buffer.from('cf:').toString('base64')}`,
+    );
+    expect(fake.calls[1]?.body).toContain('grant_type=refresh_token');
+    // The passcode is never sent twice.
+    expect(fake.calls[1]?.body).not.toContain('passcode');
+  });
+
+  it('fails clearly when the passcode is wrong', async () => {
+    const fake = new FakeFetch().on('POST', 'uaa.cf.example.org/oauth/token', () =>
+      jsonResponse({ error: 'unauthorized', error_description: 'Bad credentials' }, 401),
+    );
+    const provider = new UaaSessionTokenProvider(
+      http(fake),
+      tokenUrl,
+      'password',
+      passwordGrant('anna', 'wrong'),
+      () => NOW,
+    );
+    await expect(provider.getToken()).rejects.toThrow(/HTTP 401 \(unauthorized\)/);
+    // A second attempt does not replay the password.
+    await expect(provider.getToken()).rejects.toThrow(/expired/);
   });
 });

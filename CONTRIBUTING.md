@@ -1,6 +1,33 @@
 # Contributing
 
-Thanks for helping improve BTP Lens.
+Thanks for helping improve BTP Lens. It is an open-source project in the plain sense: everything is Apache-2.0, the roadmap and governance are public (`docs/roadmap.md`, `docs/governance.md`), and contributions from people who are not developers count just as much as code. Please read the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Ways to contribute without writing code
+
+- **Test guided mode** on a trial account and tell us where you hesitated (open a Discussion, label `ux`).
+- **Propose a rule** with the "Rule proposal" issue template. You describe the problem; someone else can implement it.
+- **Improve the docs**: fix a sentence, add a screenshot, translate `docs/getting-started-no-terminal.md`.
+- **Answer questions** in Discussions. Non-developers helping non-developers is the best thing that can happen here.
+- **Share a redacted report** (once `report --redact` exists) so we can see real-world shapes.
+
+## Your first code contribution in 15 minutes
+
+1. Fork and clone, then `npm ci && npm run build && npm test`. Everything runs offline; there are no live calls in tests.
+2. Pick an issue labelled `good first issue` (the list also lives in `docs/roadmap.md`). Each names the file to touch and the test to add.
+3. Make the change, then `npm run lint && npm run typecheck && npm run format:check && npm test`.
+4. Open a pull request. The template has a short security checklist. A maintainer replies within 24 hours on working days and will pair with you if anything is unclear.
+5. You are named in the changelog and the release notes unless you prefer not to be.
+
+## Adding a rule (the most valuable contribution)
+
+A rule is one analyzer file, one test, and one section in `docs/rules.md`:
+
+1. **Check the data source first.** Confirm the endpoint, fields and roles in `docs/data-sources.md`; if the rule needs something not listed there, verify it against the CF v3 docs and add it. Rules must work with Space Auditor unless they are `--deep`.
+2. **Create `packages/cli/src/analyzers/<ruleName>.ts`** exporting an `Analyzer` (see `noRecentDeploy.ts`): the `rule` metadata (id, title, description, roles, `helpUri` from `ruleHelpUri`), the collector checks it `requires`, and a pure `analyze(context)` that returns `Finding[]` from `context.raw`. No clock, no network: `context.now` is the scan time so `report --from` stays reproducible.
+3. **Register it** in `ANALYZERS` in `packages/cli/src/analyzers/index.ts` (report order).
+4. **Test it** in `packages/cli/test/unit/analyzers.test.ts` with the `acme` fixture or a small inline `RawData`: one case that fires, one that does not, one edge case. Analyzers must stay above 85% line coverage (CI checks).
+5. **Document it** in `docs/rules.md`: id, what it detects, severity logic, evidence fields, remediation text and references. The UI reads the same text.
+6. If the rule adds a plain-language phrase for the report's "Start here" panel, add it to `packages/ui/src/data/summary.ts`.
 
 ## Contributor License Agreement (required)
 

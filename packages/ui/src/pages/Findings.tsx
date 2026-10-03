@@ -18,6 +18,11 @@ import { SeverityStatus } from '../components/SeverityStatus';
 import { formatEvidenceValue } from '../data/format';
 import { SEVERITY_LABEL, SEVERITY_ORDER, isSeverity } from '../data/severity';
 
+/** Only http(s) references become clickable; anything else is shown as text. */
+export function isWebLink(href: string): boolean {
+  return /^https?:\/\//i.test(href);
+}
+
 function FindingItem({ finding }: { finding: Finding }) {
   return (
     <ListItemCustom
@@ -46,11 +51,15 @@ function FindingItem({ finding }: { finding: Finding }) {
         </dl>
         {finding.references.length > 0 && (
           <div className="references">
-            {finding.references.map((href) => (
-              <Link key={href} href={href} target="_blank" wrappingType="Normal">
-                {href}
-              </Link>
-            ))}
+            {finding.references.map((href) =>
+              isWebLink(href) ? (
+                <Link key={href} href={href} target="_blank" wrappingType="Normal">
+                  {href}
+                </Link>
+              ) : (
+                <Text key={href}>{href}</Text>
+              ),
+            )}
           </div>
         )}
       </article>
@@ -147,9 +156,11 @@ export function Findings() {
             <Panel key={rule.id} headerText={`${rule.title} (${findings.length})`} headerLevel="H3">
               <Text className="rule-description">
                 {rule.description}{' '}
-                <Link href={rule.helpUri} target="_blank">
-                  About this rule
-                </Link>
+                {isWebLink(rule.helpUri) && (
+                  <Link href={rule.helpUri} target="_blank">
+                    About this rule
+                  </Link>
+                )}
               </Text>
               <List accessibleName={`${rule.title} findings`}>
                 {findings.map((finding) => (

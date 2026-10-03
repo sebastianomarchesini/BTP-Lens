@@ -10,3 +10,17 @@ playwright-report/
 packages/cli/README.md
 packages/cli/LICENSE
 packages/cli/NOTICE
+# Never commit credentials, certificates or scan artefacts
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+.cf/
+*.mtar
+btp-lens-reports/
+snapshot-*.json
+*.sarif
+.DS_Store
+Thumbs.db

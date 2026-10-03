@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>BTP Lens</title>
+    <meta
+      name="description"
+      content="The free, read-only health check for your Cloud Foundry landscape on SAP BTP. One command, five minutes, nothing leaves your machine."
+    />
+    <meta property="og:title" content="BTP Lens" />
+    <meta
+      property="og:description"
+      content="Free, read-only health check for Cloud Foundry landscapes on SAP BTP. One command, five minutes, nothing leaves your machine."
+    />
+    <meta property="og:image" content="social-card.svg" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:"
+    />
+    <style>
+      :root {
+        --bg: #f7f9fb;
+        --fg: #1b232c;
+        --muted: #5b6b7b;
+        --accent: #2f8f7a;
+        --card: #ffffff;
+        --border: #dde4eb;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #12171f;
+          --fg: #f4f7fa;
+          --muted: #9fb0c2;
+          --accent: #5ad1b4;
+          --card: #1b2431;
+          --border: #2a3646;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          18px/1.6 '72',
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      main {
+        max-width: 56rem;
+        margin: 0 auto;
+        padding: 3rem 1rem 4rem;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      header img {
+        width: 56px;
+        height: 56px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2.4rem;
+      }
+      .tagline {
+        font-size: 1.35rem;
+        color: var(--muted);
+        margin: 0 0 2rem;
+      }
+      pre {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        font-size: 1.1rem;
+        overflow-x: auto;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+      }
+      .card h2 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem;
+        color: var(--accent);
+      }
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 1rem;
+      }
+      a {
+        color: var(--accent);
+      }
+      .cta {
+        display: inline-block;
+        margin: 0.5rem 1rem 0.5rem 0;
+        font-weight: 600;
+      }
+      footer {
+        margin-top: 3rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="logo.svg" alt="" />
+        <h1>BTP Lens</h1>
+      </header>
+      <p class="tagline">
+        The free, read-only health check for your Cloud Foundry landscape on SAP BTP. One command,
+        five minutes, nothing leaves your machine.
+      </p>
+      <pre>npx btp-lens</pre>
+      <p>
+        <a class="cta" href="sample-report.html">See a sample report →</a>
+        <a class="cta" href="https://github.com/sebastianomarchesini/BTP-Lens"
+          >Source on GitHub →</a
+        >
+        <a
+          class="cta"
+          href="https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/getting-started-no-terminal.md"
+          >Guide for non-developers →</a
+        >
+      </p>
+      <div class="grid">
+        <div class="card">
+          <h2>Read-only, by construction</h2>
+          <p>
+            The client can only send GET requests to the Cloud Foundry API. A test proves it. The
+            Space Auditor role is enough.
+          </p>
+        </div>
+        <div class="card">
+          <h2>Nothing leaves your machine</h2>
+          <p>
+            Allow-listed hosts in one file, no telemetry, and a report whose Content Security Policy
+            forbids any connection.
+          </p>
+        </div>
+        <div class="card">
+          <h2>Every finding says what to do</h2>
+          <p>
+            Runtime end of life, deprecated stacks, idle apps, outdated SAP libraries, known CVEs,
+            each with a remediation and a link.
+          </p>
+        </div>
+        <div class="card">
+          <h2>Open source, built in public</h2>
+          <p>
+            Apache-2.0, no paid tier. The roadmap, governance and security review live in the
+            repository, and anyone can propose a rule.
+          </p>
+        </div>
+        <div class="card">
+          <h2>For administrators too</h2>
+          <p>
+            Guided mode asks four questions and signs you in with your company login. No cf CLI, no
+            flags, no YAML.
+          </p>
+        </div>
+      </div>
+      <p>
+        The sample report on this page was generated from synthetic test fixtures, not from a real
+        landscape. The tool is in development towards v0.1.0; check the repository for the current
+        state.
+      </p>
+      <footer>
+        BTP Lens is an independent open-source project (Apache-2.0). It is not affiliated with,
+        endorsed by or sponsored by SAP SE. "SAP", "SAP BTP" and "SAPUI5" are trademarks of SAP SE,
+        used only to describe compatibility.
+      </footer>
+    </main>
+  </body>
+</html>

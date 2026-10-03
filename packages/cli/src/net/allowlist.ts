@@ -15,6 +15,12 @@ export interface EgressRule {
   port?: string;
   /** Allowed path pattern per method. A method with no entry is denied. */
   allow: Partial<Record<HttpMethod, RegExp>>;
+  /**
+   * Paths denied for every method even when `allow` matches, tested against
+   * the raw and the percent-decoded path. Used for endpoints that return
+   * credentials, so that no future collector can reach them by accident.
+   */
+  deny?: RegExp;
   /** Whether an Authorization header may be sent to this host. */
   allowAuthorization: boolean;
   /** Why the host is allowed; shown in errors and docs. */
@@ -62,11 +68,26 @@ function ruleFor(base: URL, rule: Omit<EgressRule, 'host' | 'port'>): EgressRule
   return { ...rule, host: base.hostname.toLowerCase(), port: base.port || undefined };
 }
 
-/** The customer's Cloud Foundry API: GET only, `/` and `/v3/**`. */
+/**
+ * CF v3 endpoints that return secrets. BTP Lens never needs them: `/env`
+ * includes VCAP_SERVICES credentials and `/details` is the binding's
+ * credentials. Environment variable *names* come from
+ * `/environment_variables`, which stays allowed for `--deep`.
+ */
+const CREDENTIAL_ENDPOINTS = [
+  'apps/[^/]+/env',
+  'service_credential_bindings/[^/]+/details',
+  'service_credential_bindings/[^/]+/parameters',
+  'service_instances/[^/]+/credentials',
+  'service_instances/[^/]+/parameters',
+].join('|');
+
+/** The customer's Cloud Foundry API: GET only, `/` and `/v3/**`, minus credential endpoints. */
 export function cfApiRule(apiUrl: URL): EgressRule {
   const prefix = escapeRegExp(basePath(apiUrl));
   return ruleFor(apiUrl, {
     allow: { GET: new RegExp(`^${prefix}(?:/|/v3(?:/.*)?)?$`) },
+    deny: new RegExp(`^${prefix}/v3/(?:${CREDENTIAL_ENDPOINTS})/*$`, 'i'),
     allowAuthorization: true,
     purpose: 'Cloud Foundry API (read-only)',
   });
@@ -90,6 +111,16 @@ export function logCacheRule(logCacheUrl: URL): EgressRule {
     allowAuthorization: true,
     purpose: 'Log cache (read-only)',
   });
+}
+
+/** The path as sent plus its percent-decoded form, so encoding cannot bypass `deny`. */
+function pathVariants(pathname: string): string[] {
+  try {
+    const decoded = decodeURIComponent(pathname);
+    return decoded === pathname ? [pathname] : [pathname, decoded];
+  } catch {
+    return [pathname];
+  }
 }
 
 export class EgressPolicy {
@@ -130,6 +161,12 @@ export class EgressPolicy {
 
     const match = methodRules.find((rule) => rule.allow[method as HttpMethod]?.test(url.pathname));
     if (match === undefined) return deny(`path is not allowed for ${method}`);
+
+    if (match.deny !== undefined) {
+      for (const path of pathVariants(url.pathname)) {
+        if (match.deny.test(path)) deny('endpoint returns credentials and is never read');
+      }
+    }
 
     if (hasAuthorization && !match.allowAuthorization) {
       deny('credentials may not be sent to this host');

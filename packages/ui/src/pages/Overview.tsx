@@ -4,6 +4,7 @@ import { useNavigate, useOutletContext } from 'react-router';
 import { EmptyState } from '../components/EmptyState';
 import { SeverityChart } from '../components/SeverityChart';
 import { SEVERITY_LABEL, SEVERITY_STATE } from '../data/severity';
+import { startHereSentences } from '../data/summary';
 
 interface Kpi {
   label: string;
@@ -45,6 +46,18 @@ export function Overview() {
 
   return (
     <div className="stack">
+      <Card
+        header={
+          <CardHeader titleText="Start here" subtitleText="What this report says, in plain words" />
+        }
+      >
+        <section className="start-here" aria-label="Summary in plain words">
+          {startHereSentences(data).map((sentence) => (
+            <p key={sentence}>{sentence}</p>
+          ))}
+        </section>
+      </Card>
+
       <section className="kpi-row" aria-label="Key figures">
         {kpis.map((kpi) => (
           <Card

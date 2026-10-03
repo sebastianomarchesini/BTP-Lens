@@ -51,6 +51,29 @@ describe('egress allow-list', () => {
       );
     });
 
+    it('never reads endpoints that return credentials, even with GET', () => {
+      const guid = '0a1b2c3d-0000-4000-8000-000000000042';
+      for (const path of [
+        `/v3/apps/${guid}/env`,
+        `/v3/apps/${guid}/env/`,
+        `/v3/apps/${guid}/ENV`,
+        `/v3/apps/${guid}/%65nv`,
+        `/v3/service_credential_bindings/${guid}/details`,
+        `/v3/service_credential_bindings/${guid}/parameters`,
+        `/v3/service_instances/${guid}/credentials`,
+        `/v3/service_instances/${guid}/parameters`,
+      ]) {
+        expect(allowed('GET', `https://api.cf.example.org${path}`, true), path).toBe(false);
+      }
+      // The names-only endpoint used by --deep stays allowed.
+      expect(
+        allowed('GET', `https://api.cf.example.org/v3/apps/${guid}/environment_variables`, true),
+      ).toBe(true);
+      expect(
+        allowed('GET', `https://api.cf.example.org/v3/service_credential_bindings?type=app`, true),
+      ).toBe(true);
+    });
+
     it('allows sending the bearer token', () => {
       expect(allowed('GET', 'https://api.cf.example.org/v3/apps', true)).toBe(true);
     });

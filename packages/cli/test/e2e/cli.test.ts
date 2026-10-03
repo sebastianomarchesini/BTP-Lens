@@ -59,6 +59,8 @@ describe('btp-lens CLI', () => {
       'Scanned 8 app(s) in acme-prod: 3 finding(s) (0 critical, 0 high, 1 medium, 2 low, 0 info)',
     );
     expect(c.err()).toContain('Authenticated with the BTP_LENS_ACCESS_TOKEN');
+    // SEC-22: the sharing warning is printed once per scan.
+    expect(c.out().match(/do not commit them/g)).toHaveLength(1);
   });
 
   it('exits 1 when findings meet --fail-on', async () => {
@@ -135,6 +137,53 @@ describe('btp-lens CLI', () => {
     const c = capture();
     expect(await main(['report', '--from', '/nonexistent/snapshot.json'], c.io)).toBe(EXIT.error);
     expect(c.err()).toContain('Could not read snapshot');
+  });
+
+  it('without arguments in a script prints help and exits 2, and starts guided mode on a TTY', async () => {
+    const script = capture();
+    script.io.isTTY = false;
+    expect(await main([], script.io)).toBe(EXIT.error);
+    expect(script.err()).toContain('guided mode starts when a person is at the terminal');
+    expect(script.err()).toContain('Usage:');
+
+    const { ScriptedPrompter } = await import('../../src/guided/prompt.js');
+    const tty = capture();
+    tty.io.isTTY = true;
+    tty.io.cwd = await tmp();
+    tty.io.open = null;
+    tty.io.env = { CF_HOME: tty.io.cwd, BTP_LENS_ACCESS_TOKEN: ACME.token };
+    tty.io.fetch = acmeFetch().on('GET', 'api.cf.example.org/v3/organizations?per_page=5000', () =>
+      jsonResponse({
+        pagination: { next: null },
+        resources: [{ guid: ACME.orgGuid, name: ACME.org }],
+      }),
+    ).fetch;
+    const prompter = new ScriptedPrompter(['1', 'https://api.cf.example.org', 'n']);
+    tty.io.prompter = prompter;
+    expect(await main([], tty.io)).toBe(EXIT.ok);
+    expect(prompter.transcript.join('\n')).toContain('Cancelled. Nothing was written.');
+  });
+
+  it('strips terminal escape sequences and token shapes from everything it prints', async () => {
+    const fake = acmeFetch().on('GET', /\/v3\/organizations\?.*names=evil/, () =>
+      jsonResponse({ pagination: { next: null }, resources: [] }),
+    );
+    const c = capture(fake);
+    const org = 'evil\u001b]0;pwned\u0007';
+    expect(await main(['scan', '--api', 'https://api.cf.example.org', '--org', org], c.io)).toBe(
+      EXIT.error,
+    );
+    expect(c.err()).not.toContain('\u001b');
+    expect(c.err()).toContain('Organization "evil" was not found');
+  });
+
+  it('runs doctor against the fixture API', async () => {
+    const c = capture();
+    c.io.cwd = await tmp();
+    c.io.env = { CF_HOME: c.io.cwd };
+    expect(await main(['doctor', '--api', 'https://api.cf.example.org'], c.io)).toBe(EXIT.ok);
+    expect(c.out()).toContain('OK   Cloud Foundry API: api.cf.example.org answered');
+    expect(c.out()).toContain('Everything looks fine.');
   });
 
   it('prints the version', async () => {

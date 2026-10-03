@@ -3,7 +3,7 @@ import { CheckRecorder, COLLECTOR_CHECKS } from './checks.js';
 import { collectApps, type Scope } from './collectors/apps.js';
 import { collectCurrentDroplets } from './collectors/droplets.js';
 import { listSpaces, resolveOrg } from './collectors/orgs.js';
-import { resolveTokenProvider } from './http/auth.js';
+import { type TokenProvider, resolveTokenProvider } from './http/auth.js';
 import { CfClient, type CfRoot } from './http/cfClient.js';
 import { type FetchLike, HttpClient } from './http/httpClient.js';
 import { EgressPolicy, cfApiRule, logCacheRule, uaaRule } from './net/allowlist.js';
@@ -19,6 +19,8 @@ export interface ScanOptions {
   probeRoutes: boolean;
   concurrency: number;
   env: NodeJS.ProcessEnv;
+  /** Credentials already obtained (guided mode); otherwise resolved from env and the cf CLI. */
+  tokens?: TokenProvider;
   /** Injected in tests; defaults to the global fetch. */
   fetch?: FetchLike;
   /** Injected in tests; defaults to the current time. */
@@ -39,7 +41,7 @@ function toUrl(href: string | undefined): URL | undefined {
  * Adds the platform endpoints the CF root advertises to the allow-list, and
  * returns the OAuth token endpoint (UAA preferred, login server as fallback).
  */
-function trustRootLinks(policy: EgressPolicy, root: CfRoot): URL | undefined {
+export function trustRootLinks(policy: EgressPolicy, root: CfRoot): URL | undefined {
   const uaa = toUrl(root.links.uaa?.href);
   const login = toUrl(root.links.login?.href);
   const logCache = toUrl(root.links.log_cache?.href);
@@ -67,12 +69,9 @@ export async function scan(options: ScanOptions): Promise<Snapshot> {
 
   log(`Connecting to ${options.apiUrl.origin}`);
   const tokenUrl = trustRootLinks(policy, await cf.root());
-  const tokens = await resolveTokenProvider({
-    env: options.env,
-    http,
-    apiUrl: options.apiUrl,
-    tokenUrl,
-  });
+  const tokens =
+    options.tokens ??
+    (await resolveTokenProvider({ env: options.env, http, apiUrl: options.apiUrl, tokenUrl }));
   cf.setTokenProvider(tokens);
   log(`Authenticated with the ${tokens.source}`);
 

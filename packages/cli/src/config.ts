@@ -6,7 +6,7 @@ import { type ReportFormat, parseFormats } from './reporters/index.js';
 export const FAIL_ON_VALUES = ['none', ...SEVERITIES] as const;
 export type FailOn = (typeof FAIL_ON_VALUES)[number];
 
-const ApiUrlSchema = z
+export const ApiUrlSchema = z
   .string()
   .trim()
   .transform((value, ctx) => {
@@ -87,4 +87,9 @@ export const parseReportConfig = (input: unknown): ReportConfig =>
 
 export function failThreshold(failOn: FailOn): Severity | undefined {
   return failOn === 'none' ? undefined : failOn;
+}
+
+/** Parses a CF API endpoint the way --api does (https only, no query, no credentials). */
+export function parseApiUrl(value: string): URL {
+  return parseOrThrow(ApiUrlSchema, value);
 }

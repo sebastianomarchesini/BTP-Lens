@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
@@ -102,10 +103,47 @@ function embedLicenses(): Plugin {
       const comment = `<!--\n${markdown.replace(/--/g, '- -')}-->\n`;
       await writeFile(
         htmlPath,
-        html.replace(/^<!doctype html>\n?/i, (doctype) => `${doctype}${comment}`),
+        withContentSecurityPolicy(
+          html.replace(/^<!doctype html>\n?/i, (doctype) => `${doctype}${comment}`),
+        ),
       );
     },
   };
+}
+
+/** Inline scripts that run; JSON data blocks are not executed and need no hash. */
+const EXECUTABLE_SCRIPT = /<script(?![^>]*\btype="application\/json")[^>]*>([\s\S]*?)<\/script>/g;
+
+/**
+ * Content Security Policy for the single-file report (docs/security-review.md
+ * SEC-15). Only the scripts bundled at build time may run (by hash), and the
+ * page may not connect anywhere: `connect-src 'none'` is what makes "the
+ * report cannot phone home" a browser-enforced fact, not a promise. Styles
+ * must stay inline because UI5 Web Components inject them; images and fonts
+ * are data URIs from the bundle.
+ */
+export function withContentSecurityPolicy(html: string): string {
+  const hashes = [...html.matchAll(EXECUTABLE_SCRIPT)].map(
+    (m) =>
+      `'sha256-${createHash('sha256')
+        .update(m[1] ?? '')
+        .digest('base64')}'`,
+  );
+  if (hashes.length === 0) throw new Error('Report template has no inline script to hash');
+  const policy = [
+    "default-src 'none'",
+    `script-src ${hashes.join(' ')}`,
+    "style-src 'unsafe-inline'",
+    'img-src data: blob:',
+    'font-src data:',
+    "connect-src 'none'",
+    "base-uri 'none'",
+    "form-action 'none'",
+    // frame-ancestors is ignored in a <meta> policy (and logs a warning), so it is left out.
+  ].join('; ');
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${policy}" />`;
+  if (!/<head>/.test(html)) throw new Error('Report template has no <head>');
+  return html.replace('<head>', `<head>\n    ${meta}`);
 }
 
 /**

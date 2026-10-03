@@ -45,6 +45,16 @@ body {
   gap: 0.5rem 1rem;
 }
 
+.start-here {
+  padding: 0 1rem 1rem;
+}
+
+.start-here p {
+  margin: 0 0 0.5rem;
+  font-size: var(--sapFontLargeSize);
+  line-height: 1.5;
+}
+
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));

@@ -12,6 +12,14 @@ cf set-space-role scanner@example.com my-org my-space SpaceAuditor
 
 Space Auditor can read apps, droplets, processes, routes and service binding *metadata*. It cannot read environment variables or service credentials, and it cannot change anything.
 
+## Asking for the role
+
+Most people who want to run BTP Lens cannot grant themselves a role. Copy this to your administrator (the person who manages your subaccount or Cloud Foundry org):
+
+> Hi, could you give my user **<your e-mail>** the **Space Auditor** role on the spaces **<space names>** in the Cloud Foundry org **<org name>**? Space Auditor is read-only: it lets me see apps and their settings, but not change anything, read credentials or restart anything. I need it to run a read-only health report (BTP Lens, an open-source tool, https://github.com/sebastianomarchesini/BTP-Lens). Thank you!
+
+In the BTP cockpit the administrator does this under **Cloud Foundry Environment → Spaces → <space> → Members → Add Members**, choosing the **Space Auditor** role. With the cf CLI: `cf set-space-role <your e-mail> <org> <space> SpaceAuditor`.
+
 ## Roles per check
 
 | Check id | What it reads | Roles | Default |

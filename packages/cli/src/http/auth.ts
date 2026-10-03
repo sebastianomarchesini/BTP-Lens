@@ -212,11 +212,63 @@ export class CfCliTokenProvider extends RefreshingTokenProvider {
   }
 }
 
+/**
+ * A session started by BTP Lens itself, in guided mode: a one-time passcode
+ * (`cf login --sso`) or a username and password. The initial grant runs
+ * once; afterwards the refresh token keeps the session alive in memory.
+ * Nothing is written to disk. Verified against cloudfoundry/cli
+ * `command/v7/login_command.go` and `api/uaa/auth.go`
+ * (docs/data-sources.md §1.1).
+ */
+export class UaaSessionTokenProvider extends RefreshingTokenProvider {
+  private refreshToken: string | undefined;
+  private grant: Record<string, string> | undefined;
+
+  constructor(
+    private readonly http: HttpClient,
+    private readonly tokenUrl: URL,
+    readonly source: string,
+    grant: Record<string, string>,
+    now: () => number = Date.now,
+  ) {
+    super(now);
+    this.grant = grant;
+  }
+
+  protected async fetchToken(): Promise<string> {
+    let form: Record<string, string>;
+    if (this.refreshToken) {
+      form = { grant_type: 'refresh_token', refresh_token: this.refreshToken };
+    } else if (this.grant) {
+      form = this.grant;
+      // Passcodes and passwords are used once and then forgotten.
+      this.grant = undefined;
+    } else {
+      throw new CfAuthError('The session has expired. Run btp-lens again to sign in.');
+    }
+    // The cf CLI's public client: id "cf", empty secret.
+    const res = await requestToken(this.http, this.tokenUrl, CF_PUBLIC_CLIENT_ID, '', form);
+    this.refreshToken = res.refresh_token;
+    return res.access_token;
+  }
+}
+
+/** The OAuth client the cf CLI uses for interactive logins (public, no secret). */
+export const CF_PUBLIC_CLIENT_ID = 'cf';
+
+export function passcodeGrant(passcode: string): Record<string, string> {
+  return { grant_type: 'password', passcode };
+}
+
+export function passwordGrant(username: string, password: string): Record<string, string> {
+  return { grant_type: 'password', username, password };
+}
+
 export function cfConfigPath(env: NodeJS.ProcessEnv): string {
   return join(env.CF_HOME ?? homedir(), '.cf', 'config.json');
 }
 
-async function readCfCliConfig(path: string): Promise<CfCliConfig | undefined> {
+export async function readCfCliConfig(path: string): Promise<CfCliConfig | undefined> {
   let text: string;
   try {
     text = await readFile(path, 'utf8');
