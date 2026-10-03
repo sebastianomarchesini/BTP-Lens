@@ -36,7 +36,7 @@ Verdicts: **✅ verified** (present in code and covered by a test), **🔧 fixed
 | SEC-19 SBOM parsing | ⏳ | `sbom` command not implemented yet |
 | SEC-20 SARIF without local paths | ✅ | pseudo-URIs `cf/<org>/<space>/<app>`, percent-encoded |
 | SEC-21 snapshot input validated and size-capped | ✅ / 🔧 | strict zod parse, schema version check; **fixed now:** 256 MB cap before parsing (`snapshot.ts`, `files.test.ts`) |
-| SEC-22 private output modes and warning | 🔧 | `io/files.ts`: directories `0700`, files `0600` (`files.test.ts`); guided mode prints the sharing warning. The one-line warning for `scan` is still to add |
+| SEC-22 private output modes and warning | 🔧 | `io/files.ts`: directories `0700`, files `0600` (`files.test.ts`); guided mode prints the sharing warning. `scan` and `report` print the sharing warning (added 2026-10-03) |
 | SEC-23 `report --redact` | ⏳ | not implemented; needed before testers share screenshots (campaign Phase 0) |
 | Fixture linter (no e-mails, tokens, real hosts, IPs) | ⏳ | Fixtures use `example.org` and synthetic GUIDs, and `leak.test.ts` covers outputs, but there is no test that lints the fixture files themselves |
 | SC-01 provenance publishing from CI | 👤 / ⏳ | no release workflow yet |
@@ -72,7 +72,6 @@ Verdicts: **✅ verified** (present in code and covered by a test), **🔧 fixed
 - [ ] SEC-19 SBOM parsing guards when `sbom` lands
 - [ ] SEC-23 `report --redact`
 - [ ] SEC-05 `BTP_LENS_CLIENT_SECRET_FILE`
-- [ ] SEC-22 one-line sharing warning after `scan`
 - [ ] Fixture linter test; `npm pack --dry-run` in CI; release workflow with provenance (SC-01, SC-04)
 - [ ] Owner: protect `main`, enable secret scanning + push protection, reserve the npm name, enable Pages and Sponsors
 

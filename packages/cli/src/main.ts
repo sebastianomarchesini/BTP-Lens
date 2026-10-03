@@ -66,6 +66,9 @@ function printSummary(data: ReportData, files: string[], io: CliIo): void {
     io.stdout(`  skipped ${check.id}: ${check.reason ?? ''}\n`);
   }
   io.stdout(`Wrote:\n${files.map((f) => `  ${f}\n`).join('')}`);
+  io.stdout(
+    'Reports describe your landscape (org, space, app and route names). Share them only with people who may see it, and do not commit them.\n',
+  );
 }
 
 async function runScan(config: ScanConfig, io: CliIo): Promise<number> {

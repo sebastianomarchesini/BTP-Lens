@@ -47,7 +47,7 @@ Still to do before tagging 0.1.0:
 
 Each of these is scoped to one file, one test and one doc line, and a maintainer will pair on it if asked. They are turned into labelled issues in Phase 0 of the campaign.
 
-1. Print a one-line "reports contain internal details, do not commit them" warning after `scan` (SEC-22).
+1. ~~Print a one-line "reports contain internal details, do not commit them" warning after `scan` (SEC-22).~~ Done 2026-10-03.
 2. Add a fixture-linter test that fails on e-mail addresses, JWTs, real BTP hostnames and IP addresses in `packages/cli/test/fixtures`.
 3. Add `npm pack --dry-run` to CI and assert that only `dist`, `README.md`, `LICENSE` and `NOTICE` ship.
 4. `btp-lens doctor`: add the role check (list spaces visible in the target org when a session exists).
