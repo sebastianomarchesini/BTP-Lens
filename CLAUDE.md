@@ -158,3 +158,17 @@ Exit codes: 0 means no findings at or above `--fail-on` (default: none); 1 means
 - v0.2: opt-in user usage from the SAP Audit Log service (hashed and aggregated), log-cache request metrics, XSUAA scope analysis, GitHub Action
 - v0.3: server mode for the same React UI (`btp-lens serve`, or deployed on BTP with approuter, XSUAA and a small CAP service for snapshots); Kyma support
 - Later: opt-in anonymous aggregate statistics for a yearly public report
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live in this repo's GitHub Issues (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, shared by `packages/cli` and `packages/ui`. See `docs/agents/domain.md`.
