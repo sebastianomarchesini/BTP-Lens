@@ -2,7 +2,7 @@
 
 **Goal.** A person who is not a developer, has never opened a terminal on purpose, and has a normal BTP cockpit login with Space Auditor, gets a readable HTML report of their Cloud Foundry landscape in **under 5 minutes** and without reading any documentation.
 
-> **Status (2026-09-30).** Implemented on this branch: guided mode (`btp-lens` with no arguments: region or pasted endpoint, sign-in with a one-time code or username and password, org pick, confirm, report auto-opened, `--no-open`), `btp-lens doctor`, the "Start here" panel, the no-terminal guide, the FAQ and the administrator text. Still open: the region list needs re-verification against help.sap.com, `report --redact`, the glossary and print stylesheet, `btp-lens reset` and remembering the last scan, single executables (v0.2), and the three usability sessions. Section 8 tracks each item.
+> **Status (2026-09-30).** Implemented on this branch: guided mode (`btp-lens` with no arguments: region or pasted endpoint, sign-in with a one-time code or username and password, org pick, confirm, report auto-opened, `--no-open`), `btp-lens doctor`, the "Start here" panel, the no-terminal guide, the FAQ and the administrator text. Still open: `report --redact`, the glossary and print stylesheet, `btp-lens reset` and remembering the last scan, single executables (v0.2), and the three usability sessions. Section 8 tracks each item.
 
 This document defines what "basic version" means, who it is for, the exact interaction, and how we measure it. It complements `CLAUDE.md`; where the two differ on UX, this document wins. Nothing here weakens a security or privacy constraint: guided mode uses the same read-only client, the same allow-list and the same Space Auditor defaults.
 
@@ -164,7 +164,7 @@ Hand these to whoever implements v0.1:
 
 - [x] `btp-lens` with no subcommand in a TTY starts the wizard (§3); in a non-TTY it prints usage and exits 2.
 - [x] Sign-in options: passcode (SSO), existing cf CLI login, username/password. Passcode flow verified against the cf CLI source and recorded in `data-sources.md` §1.1.
-- [x] Region convenience list in one module with a verification date; pasted URL wins. 🟡 Re-verify the list against help.sap.com before 0.1.0.
+- [x] Region convenience list in one module with a verification date; pasted URL wins. Re-verified 2026-10-10 against the SAP help page source, including extension landscapes; a typed region id or region domain also works.
 - [x] `btp-lens doctor` with Node.js, API reachability, TLS trust, cf CLI login and output folder. Open: the role check (needs a signed-in session; guided mode reports it instead).
 - [ ] The ten hand-written error messages in §3.3, each with a test. Done: no network, proxy needed, TLS interception, wrong API URL, no orgs visible, no spaces visible, output folder not writable. Open: no Node (cannot be caught from Node itself; covered by the guide), expired login wording, PowerShell execution policy.
 - [x] Output in `./btp-lens-reports/<timestamp>/`, report auto-opened, `--no-open` to disable.
