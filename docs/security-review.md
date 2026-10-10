@@ -42,7 +42,6 @@ Verdicts: **✅ verified** (present in code and covered by a test), **🔧 fixed
 | SC-01 provenance publishing from CI | 👤 / ⏳ | no release workflow yet |
 | SC-02 actions pinned by SHA | ✅ / 🔧 | `security.yml` already pinned; all seven SHAs re-verified against upstream tags today. **Fixed now:** `ci.yml` was on floating `@v7` tags and is pinned; the new `pages.yml` is pinned |
 | SC-03 `npm ci --ignore-scripts`, tiny runtime dependency list | 🔧 / ✅ | CI and Pages install with `--ignore-scripts` (build and tests verified to pass that way). Runtime dependencies: `commander`, `zod` only |
-| SC-03a `npm audit` clean (dev tree) | 🔧 | Added 2026-10-10. `braces` ≤ 3.0.3 (GHSA-vfj7-8cjw-p6xm) has no patched release; it came in only via `vite-plugin-singlefile` → `micromatch`. Root `package.json` `overrides` maps `micromatch` to `picomatch@^4.0.7`, which has the same `isMatch` API and no `braces` dependency (the plugin calls `isMatch` only for `inlinePattern`, which we don't set). Drop the override once the plugin stops depending on `micromatch`. `source-map-js` bumped to 1.2.2 (GHSA-68fv-2mgg-jv7q). Build-time only; nothing ships in the CLI or the report |
 | SC-04 `files` whitelist | ✅ | `packages/cli/package.json` ships `dist`, `README.md`, `LICENSE`, `NOTICE`; `npm pack --dry-run` check in CI still to add |
 | SC-05 bundled licences | ✅ | `THIRD_PARTY_LICENSES.md` generated and embedded in the report as a leading comment |
 
