@@ -1,6 +1,6 @@
 {
   "name": "btp-lens",
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "description": "Read-only scanner for Cloud Foundry landscapes on SAP BTP: inventory, runtime health, outdated libraries and security posture.",
   "license": "Apache-2.0",
   "type": "module",

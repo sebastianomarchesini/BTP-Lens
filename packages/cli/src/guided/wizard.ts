@@ -46,8 +46,15 @@ export function reportDirName(now: Date): string {
   return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}-${p(now.getHours())}${p(now.getMinutes())}`;
 }
 
-/** One sentence on what went wrong, one on what to do. No stack traces. */
-export function explainConnectionError(error: unknown, apiUrl: URL): string {
+/**
+ * One sentence on what went wrong, one on what to do. No stack traces.
+ * `doctor` passes `suggestDoctor: false`, so it never tells people to run itself.
+ */
+export function explainConnectionError(
+  error: unknown,
+  apiUrl: URL,
+  { suggestDoctor = true }: { suggestDoctor?: boolean } = {},
+): string {
   const text = error instanceof Error ? error.message : String(error);
   const lower = text.toLowerCase();
   if (/certificate|cert_|self.signed|unable to verify/.test(lower)) {
@@ -66,6 +73,18 @@ export function explainConnectionError(error: unknown, apiUrl: URL): string {
     return (
       `${apiUrl.host} could not be reached.\n` +
       'If you are on a company network, set HTTPS_PROXY=http://proxy.company:8080 and NODE_USE_ENV_PROXY=1 (ask IT for the address), then try again.'
+    );
+  }
+  if (/\b(401|403|407)\b/.test(lower)) {
+    return (
+      `${apiUrl.host} refused the request before sign-in (${text}).\n` +
+      'A company proxy or firewall is probably blocking it: ask IT to allow this address, or set HTTPS_PROXY=http://proxy.company:8080 and NODE_USE_ENV_PROXY=1.'
+    );
+  }
+  if (!suggestDoctor) {
+    return (
+      `${text}\n` +
+      'Check the API endpoint in the BTP cockpit (Subaccount → Overview → Cloud Foundry Environment) and try again in a few minutes.'
     );
   }
   return `${text}\nRun \`${TOOL_NAME} doctor\` for a check of your environment.`;

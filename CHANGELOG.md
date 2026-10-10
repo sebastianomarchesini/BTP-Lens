@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased (v0.1 in development)
+## 0.1.0 (2026-10-10)
+
+First public release. It covers guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule and every report format. The other rules in [docs/rules.md](docs/rules.md) (runtime and stack end of life, buildpack age, idle apps, SAPUI5 maintenance, `@sap/*` packages, known CVEs and plain-text secrets) and the `sbom` command arrive in the next releases.
+
+### Fixed
+
+- `btp-lens doctor` no longer tells you to run `btp-lens doctor` when the API check fails. A `401`, `403` or `407` from the API root is now explained as a proxy or firewall block, with the fix.
 
 ### Added
 

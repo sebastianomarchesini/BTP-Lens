@@ -77,6 +77,25 @@ describe('btp-lens doctor', () => {
     expect(text).not.toContain('eyJ');
   });
 
+  it('explains a proxy 403 and never tells people to run doctor again', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'btp-lens-doctor-'));
+    const fake = new FakeFetch().on('GET', 'api.cf.example.org/', () =>
+      jsonResponse({ errors: [] }, 403),
+    );
+    const checks = await runDoctor({
+      api,
+      env: { CF_HOME: home },
+      cwd: home,
+      fetch: fake.fetch,
+      nodeVersion: '22.12.0',
+      now: () => NOW,
+    });
+    const text = formatDoctor(checks);
+    expect(text).toContain('FAIL Cloud Foundry API');
+    expect(text).toContain('proxy or firewall');
+    expect(text).not.toMatch(/Run `btp-lens doctor`/);
+  });
+
   it('treats a missing cf CLI login as fine, because guided mode signs in itself', async () => {
     const home = await mkdtemp(join(tmpdir(), 'btp-lens-doctor-'));
     const checks = await runDoctor({ env: { CF_HOME: home }, cwd: home, nodeVersion: '24.0.0' });

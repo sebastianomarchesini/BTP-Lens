@@ -63,7 +63,7 @@ async function checkApi(api: URL, fetchImpl: FetchLike | undefined): Promise<Doc
       detail: `${api.host} answered in ${Date.now() - started} ms`,
     };
   } catch (error) {
-    const [detail, fix] = explainConnectionError(error, api).split('\n');
+    const [detail, fix] = explainConnectionError(error, api, { suggestDoctor: false }).split('\n');
     return {
       name: 'Cloud Foundry API',
       ok: false,

@@ -1,0 +1,89 @@
+name: Release
+
+# Runs when a version tag is pushed, for example `git tag v0.1.0 && git push origin v0.1.0`.
+# Publishes the `btp-lens` package to npm with provenance and creates the GitHub release
+# from the matching CHANGELOG.md section.
+#
+# npm authentication, in order of preference:
+#   1. Trusted publishing (no token): on npmjs.com open the btp-lens package →
+#      Settings → Trusted publisher → GitHub Actions, and enter
+#      owner `sebastianomarchesini`, repository `BTP-Lens`, workflow `release.yml`.
+#   2. Fallback: an npm automation token stored as the repository secret NPM_TOKEN.
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm and create the GitHub release
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # npm trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Tag must match the package version
+        run: |
+          version="$(node -p "require('./packages/cli/package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match packages/cli/package.json version ${version}" >&2
+            exit 1
+          fi
+          grep -q "^## ${version} " CHANGELOG.md || { echo "CHANGELOG.md has no '## ${version}' section" >&2; exit 1; }
+
+      # No install scripts: a compromised dependency cannot run code at install time.
+      - run: npm ci --ignore-scripts
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+      - name: Only dist, README, LICENSE and NOTICE ship
+        run: |
+          npm pack -w btp-lens --dry-run --json > pack.json
+          node -e '
+            const files = JSON.parse(require("fs").readFileSync("pack.json", "utf8"))[0].files.map((f) => f.path);
+            const allowed = /^(dist\/|README\.md$|LICENSE$|NOTICE$|package\.json$)/;
+            const extra = files.filter((p) => !allowed.test(p));
+            if (!files.includes("dist/cli.js") || !files.includes("dist/report-template.html")) {
+              console.error("The package is missing dist/cli.js or dist/report-template.html"); process.exit(1);
+            }
+            if (extra.length) { console.error("Unexpected files in the package:", extra); process.exit(1); }
+            console.log(files.length + " files, all allowed");
+          '
+          rm pack.json
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - run: npm install -g npm@11
+      - name: Publish to npm
+        run: npm publish -w btp-lens --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v v="$version" '
+            $0 ~ "^## " v " " { on = 1; next }
+            on && /^## / { exit }
+            on { print }
+          ' CHANGELOG.md > release-notes.md
+          gh release create "$GITHUB_REF_NAME" --title "BTP Lens $version" --notes-file release-notes.md --verify-tag

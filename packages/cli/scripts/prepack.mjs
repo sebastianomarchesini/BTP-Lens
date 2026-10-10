@@ -8,4 +8,5 @@ for (const file of ['README.md', 'LICENSE', 'NOTICE']) {
     new URL(`../${file}`, import.meta.url),
   );
 }
-console.log('Copied README.md, LICENSE and NOTICE into the package');
+// stderr, so `npm pack --json` output stays valid JSON.
+console.error('Copied README.md, LICENSE and NOTICE into the package');

@@ -166,6 +166,12 @@ describe('explainConnectionError', () => {
     ).toMatch(/could not be found/);
     expect(explainConnectionError(new Error('fetch failed'), api)).toMatch(/HTTPS_PROXY/);
     expect(explainConnectionError(new Error('CF API 500'), api)).toMatch(/btp-lens doctor/);
+    expect(explainConnectionError(new Error('CF API 403 for https://x/'), api)).toMatch(
+      /proxy or firewall/,
+    );
+    expect(
+      explainConnectionError(new Error('CF API 500'), api, { suggestDoctor: false }),
+    ).not.toMatch(/doctor/);
   });
 });
 

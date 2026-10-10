@@ -2,7 +2,7 @@
 
 **A read-only health and security scanner for Cloud Foundry landscapes on SAP BTP.** Open source under Apache-2.0, free for everyone, built in public, and it runs on your machine.
 
-Point BTP Lens at a Cloud Foundry org. With nothing more than the **Space Auditor** role, it inventories every app, flags stale deployments, end-of-life runtimes, outdated buildpacks and libraries, known vulnerabilities and risky configuration, and writes an **offline HTML report** plus JSON, CSV and SARIF.
+Point BTP Lens at a Cloud Foundry org. With nothing more than the **Space Auditor** role, it inventories every app, flags stale deployments, and writes an **offline HTML report** plus JSON, CSV and SARIF. Checks for end-of-life runtimes, outdated buildpacks and libraries, known vulnerabilities and risky configuration follow in the next releases.
 
 It sends only `GET` requests to the Cloud Foundry API. It contacts no third party except for public version and vulnerability lookups, and it never writes user names, tokens or secret values into its output.
 
@@ -13,7 +13,7 @@ It sends only `GET` requests to the Cloud Foundry API. It contacts no third part
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/sebastianomarchesini/BTP-Lens/badge)](https://scorecard.dev/viewer/?uri=github.com/sebastianomarchesini/BTP-Lens)
 -->
 
-> **Status: v0.1 in development.** This build includes guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule, all report formats and the HTML report. The other v0.1 rules land in the next slices (see [docs/rules.md](docs/rules.md)). Nothing is published to npm yet.
+> **Status: 0.1.0, first public release.** It includes guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule, all report formats and the HTML report. The other rules are planned in [docs/rules.md](docs/rules.md) and the [roadmap](docs/roadmap.md). Feedback from real landscapes is very welcome in the issues.
 
 ![Overview of a sample report](docs/images/report-overview-light.png)
 
@@ -29,15 +29,13 @@ Guided mode asks four questions: where your landscape is (pick a region or paste
 
 ## Quickstart for developers and CI
 
-Once 0.1.0 is published:
-
 ```sh
 cf login -a https://api.cf.eu10.hana.ondemand.com      # any user with Space Auditor
 npx btp-lens scan --api https://api.cf.eu10.hana.ondemand.com --org my-org
 open reports/btp-lens-report.html                      # works offline
 ```
 
-Until then, run it from source (Node.js 22.12 or later):
+To run the latest development version from source (Node.js 22.12 or later):
 
 ```sh
 git clone https://github.com/sebastianomarchesini/BTP-Lens.git && cd BTP-Lens
