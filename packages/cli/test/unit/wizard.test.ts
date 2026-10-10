@@ -104,6 +104,33 @@ describe('guided mode', () => {
     expect(fake.calls.map((c) => c.url.pathname)).toEqual(['/', '/v3/organizations']);
   });
 
+  it('accepts the region domain or id where the API endpoint is asked', async () => {
+    for (const typed of ['us10-001.hana.ondemand.com', 'eu10-004']) {
+      const cwd = await tmp();
+      const region = typed.split('.')[0];
+      const host = `api.cf.${region}.hana.ondemand.com`;
+      const fake = new FakeFetch()
+        .on('GET', `${host}/`, () =>
+          jsonResponse({ links: { uaa: { href: `https://uaa.cf.${region}.hana.ondemand.com` } } }),
+        )
+        .on('GET', `${host}/v3/organizations?per_page=5000`, () =>
+          jsonResponse({ pagination: { next: null }, resources: [] }),
+        );
+      const prompter = new ScriptedPrompter(['1', typed]);
+      await expect(
+        runWizard({
+          prompter,
+          env: { BTP_LENS_ACCESS_TOKEN: 'abc', CF_HOME: cwd },
+          cwd,
+          open: null,
+          fetch: fake.fetch,
+          now: () => ACME.now,
+        }),
+      ).rejects.toThrow(/no role in any Cloud Foundry org/);
+      expect(prompter.transcript.join('\n')).toContain(`Checking ${host}`);
+    }
+  });
+
   it('exits 0 and writes nothing when the user declines to start', async () => {
     const cwd = await tmp();
     const prompter = new ScriptedPrompter(['1', 'https://api.cf.example.org', '1', 'K7Q2ZX', 'n']);

@@ -88,7 +88,10 @@ async function stepWhere(o: WizardOptions): Promise<Session> {
   );
   const choice = await p.choose(
     'Paste it, or pick your region:',
-    ['Paste the API endpoint', ...REGIONS.map((r) => `${r.id}  ${r.label}`)],
+    [
+      'Paste the API endpoint, or type a region such as eu10-004',
+      ...REGIONS.map((r) => `${r.id}  ${r.label}`),
+    ],
     0,
   );
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
@@ -96,7 +99,7 @@ async function stepWhere(o: WizardOptions): Promise<Session> {
     try {
       const value =
         choice === 0
-          ? await p.ask('API endpoint (https://api.cf.…)')
+          ? await p.ask('API endpoint (https://api.cf.…) or region (eu10-004)')
           : (REGIONS[choice - 1]?.api ?? '');
       apiUrl = parseApiUrl(value);
     } catch (error) {
