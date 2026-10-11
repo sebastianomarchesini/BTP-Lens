@@ -8,6 +8,8 @@ Types: `metric` (stars, downloads, visitors, contributors), `mention` (someone e
 
 ## Log
 
+- 2026-10-11 · milestone · `btp-lens@0.1.0` published to npm from the tag-triggered release workflow, with SLSA provenance signed by GitHub Actions (OIDC trusted publisher, no publish token exists) · https://www.npmjs.com/package/btp-lens/v/0.1.0
+- 2026-10-11 · milestone · GitHub release v0.1.0 created from the CHANGELOG · https://github.com/sebastianomarchesini/BTP-Lens/releases/tag/v0.1.0
 - 2026-10-11 · milestone · Launch decision: 0.1.0 ships for developers and platform teams, with the non-developer usability sessions openly deferred to 0.1.1 (README status note) · https://github.com/sebastianomarchesini/BTP-Lens#readme
 - 2026-10-11 · milestone · Pre-release audit of 0.1.0 completed and every finding fixed or scheduled · https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/audits/2026-10-11-release-0.1.0-audit.md
 - 2026-10-03 · milestone · npm name `btp-lens` reserved with placeholder 0.0.1 (maintainer account, 2FA) · https://www.npmjs.com/package/btp-lens
