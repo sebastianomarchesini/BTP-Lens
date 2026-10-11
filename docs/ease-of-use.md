@@ -171,4 +171,4 @@ Hand these to whoever implements v0.1:
 - [ ] UI (§5): done "Start here" panel and honest skipped states. Open: "What this means" per finding, print stylesheet, glossary.
 - [ ] `report --redact` (also SEC-23).
 - [x] `docs/getting-started-no-terminal.md`, `docs/faq.md`, and the administrator-facing wording in `docs/permissions.md`. Screenshots for the guide still to be taken on Windows and macOS.
-- [ ] Three usability sessions recorded as issues before tagging 0.1.0.
+- [ ] Three usability sessions recorded as issues. Not held before 0.1.0: the release was deliberately aimed at developers and platform teams and the README says so. Due before 0.1.1.

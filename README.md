@@ -21,10 +21,12 @@ It sends only `GET` requests to the Cloud Foundry API. It contacts no third part
 -->
 
 > **Status: 0.1.0, first public release.** It includes guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule, all report formats and the HTML report. The other rules are planned in [docs/rules.md](docs/rules.md) and the [roadmap](docs/roadmap.md). Feedback from real landscapes is very welcome in the issues.
+>
+> This first release is aimed at **developers and platform teams**. Guided mode and the no-terminal guide were written for non-developers but have not yet been tested with them in usability sessions; those sessions are planned for 0.1.1. If you are not a developer and try it anyway, every hesitation you report is a contribution.
 
 ![Overview of a sample report](docs/images/report-overview-light.png)
 
-## Try it in five minutes (no developer skills needed)
+## Try it in five minutes (guided mode)
 
 You need [Node.js](https://nodejs.org) (the LTS installer, next-next-finish) and a BTP login with the **Space Auditor** role, which is read-only. You do not need the cf CLI.
 

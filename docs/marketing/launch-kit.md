@@ -2,7 +2,7 @@
 
 Drafts for every channel in `campaign.md`. Replace `<…>` placeholders, keep every claim true of the released version, and keep the non-affiliation line wherever the word SAP appears. Tone: plain, specific, no hype words.
 
-> **Claims check (2026-09-30).** True today: read-only GET-only client with tests, allow-list in one file, offline single-file report with a `connect-src 'none'` CSP, guided mode with company-login sign-in, `doctor`, Space Auditor sufficiency, no telemetry, `APP_NO_RECENT_DEPLOY`. **Not yet true:** the other eight rules, `report --redact`, downloadable executables, "three non-developer testers" (run the sessions first). Edit each draft against this list on launch day.
+> **Claims check (2026-10-11, launch day).** True today: read-only GET-only client with tests, allow-list in one file, offline single-file report with a `connect-src 'none'` CSP, guided mode with company-login sign-in, `doctor`, Space Auditor sufficiency, no telemetry, `APP_NO_RECENT_DEPLOY`, npm publish with provenance. **Not yet true:** the other eight rules, `report --redact`, downloadable executables, usability sessions with non-developers (none held; 0.1.0 launches for developers and platform teams and says so). In every draft: address developers, say that non-developer testing is still open, and never quote a tester who does not exist. Edit each draft against this list before posting.
 
 ---
 
@@ -90,7 +90,7 @@ Drafts for every channel in `campaign.md`. Replace `<…>` placeholders, keep ev
 
 > Hi HN. Cloud Foundry landscapes on SAP's platform accumulate apps that nobody looks at: Node 16 runtimes, cflinuxfs3 stacks, apps last deployed in 2023, dependencies with known CVEs. The platform cockpit shows one space at a time. BTP Lens is a TypeScript CLI that reads the CF v3 API with GET only (enforced in the client, covered by a test), needs only the read-only Space Auditor role, and writes an offline single-file HTML report plus JSON/CSV/SARIF. Outbound hosts are allow-listed in one file; no telemetry.
 >
-> Things I would like feedback on: the egress allow-list design, the CSV/HTML injection handling for attacker-controlled app names, and whether the guided mode is actually usable by non-developers (three testers say yes; I am biased).
+> Things I would like feedback on: the egress allow-list design, the CSV/HTML injection handling for attacker-controlled app names, and whether the guided mode is actually usable by non-developers (I have not run usability sessions yet, so I only know it works for me).
 >
 > Independent project, Apache-2.0, not affiliated with SAP.
 

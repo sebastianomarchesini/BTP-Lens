@@ -20,7 +20,7 @@ Moved to the 0.1.x and 0.2 releases:
 - [ ] `btp-lens sbom` from `package-lock.json`, `pom.xml`, `mta.yaml` and `.mtar`
 - [ ] `report --redact` so people can share screenshots
 - [ ] Route probe for the UI5 version with the SSRF guards from the security review
-- [ ] Three usability sessions with non-developers
+- [ ] Three usability sessions with non-developers (0.1.0 shipped without them, for developers and platform teams; due before 0.1.1)
 - [x] npm publish with provenance; GitHub release with changelog (tag-triggered `release.yml`)
 
 ## v0.1.1
