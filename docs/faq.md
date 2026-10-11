@@ -1,5 +1,7 @@
 # Frequently asked questions
 
+Evaluating BTP Lens for a company? The [due diligence page](due-diligence.md) goes deeper on safety, data, AI-assisted development, supply chain, licensing and maintenance.
+
 ### Is it safe to run with my production login?
 
 BTP Lens only reads. The HTTP client can send `GET` requests to the Cloud Foundry API and nothing else; the one exception is the login request to your own UAA server. This is enforced in one file (`packages/cli/src/net/allowlist.ts`) and covered by tests that try every other method and fail if one gets through. The Space Auditor role, which is read-only, is all it needs. A public [security review](security-review.md) and a [disclosure policy](../SECURITY.md) exist for the same reason you are asking.

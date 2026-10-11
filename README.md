@@ -105,6 +105,8 @@ The Cloud Foundry list endpoints answer with what your user may see rather than 
 
 See [docs/privacy.md](docs/privacy.md), [docs/faq.md](docs/faq.md), [docs/data-sources.md](docs/data-sources.md) and the [security review](docs/security-review.md).
 
+Evaluating BTP Lens for your company? [docs/due-diligence.md](docs/due-diligence.md) answers the questions that managers and security, legal and procurement teams ask before a first run, each with the code, test or document behind it.
+
 ## Sample report
 
 | Findings (dark theme) | Apps |

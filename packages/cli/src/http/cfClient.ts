@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { TokenProvider } from './auth.js';
 import { CfApiError, CfAuthError, CfForbiddenError, CfNotFoundError } from './errors.js';
-import type { HttpClient, HttpResponse } from './httpClient.js';
+import type { HttpResponse, ReadOnlyHttp } from './httpClient.js';
 
 const LinkSchema = z.object({ href: z.string() }).nullish();
 
@@ -43,15 +43,17 @@ export type Query = Record<string, string | number | boolean>;
 const MAX_PAGES = 1000;
 
 /**
- * Read-only Cloud Foundry v3 client. It has no method other than GET, and the
- * egress allow-list denies every other method for the CF API host as well.
+ * Read-only Cloud Foundry v3 client. It is built on `ReadOnlyHttp`, whose only
+ * member is a `get` without method or body, so no code here can send anything
+ * but GET; the egress allow-list denies every other method for the CF API host
+ * as well.
  */
 export class CfClient {
   private tokens: TokenProvider | undefined;
   private readonly basePath: string;
 
   constructor(
-    private readonly http: HttpClient,
+    private readonly http: ReadOnlyHttp,
     readonly apiUrl: URL,
   ) {
     this.basePath = apiUrl.pathname.replace(/\/+$/, '');
@@ -141,7 +143,7 @@ export class CfClient {
       if (!this.tokens) throw new CfAuthError('No credentials configured for the CF API.');
       headers.authorization = `bearer ${await this.tokens.getToken()}`;
     }
-    return this.http.request({ url, method: 'GET', headers });
+    return this.http.get({ url, headers });
   }
 
   private toError(res: HttpResponse): CfApiError {

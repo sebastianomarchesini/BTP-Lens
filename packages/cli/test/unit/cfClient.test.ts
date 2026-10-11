@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 import { z } from 'zod';
 import type { TokenProvider } from '../../src/http/auth.js';
 import { CfClient } from '../../src/http/cfClient.js';
@@ -8,7 +8,7 @@ import {
   CfForbiddenError,
   CfNotFoundError,
 } from '../../src/http/errors.js';
-import { HttpClient } from '../../src/http/httpClient.js';
+import { type HttpGetRequest, HttpClient, type ReadOnlyHttp } from '../../src/http/httpClient.js';
 import { EgressPolicy, cfApiRule } from '../../src/net/allowlist.js';
 import { FakeFetch, jsonResponse, noSleep } from '../support/fakeFetch.js';
 
@@ -43,6 +43,25 @@ const page = (resources: unknown[], next: string | null, included?: Record<strin
 });
 
 describe('CfClient', () => {
+  it('is built on the GET-only view of the HTTP layer', async () => {
+    // Its only dependency has one member, `get`, whose request has no method and no body.
+    expectTypeOf<ConstructorParameters<typeof CfClient>[0]>().toEqualTypeOf<ReadOnlyHttp>();
+    expectTypeOf<keyof ReadOnlyHttp>().toEqualTypeOf<'get'>();
+    expectTypeOf<HttpGetRequest>().not.toHaveProperty('method');
+    expectTypeOf<HttpGetRequest>().not.toHaveProperty('body');
+    // An object with nothing but `get` is enough to run it.
+    const seen: HttpGetRequest[] = [];
+    const http: ReadOnlyHttp = {
+      get: (req) => {
+        seen.push(req);
+        const text = JSON.stringify({ links: {} });
+        return Promise.resolve({ url: req.url, status: 200, headers: new Headers(), text });
+      },
+    };
+    await new CfClient(http, api).root();
+    expect(seen.map((req) => req.url.href)).toEqual(['https://api.cf.example.org/']);
+  });
+
   it('follows pagination.next and merges included resources', async () => {
     const fake = new FakeFetch()
       .on(

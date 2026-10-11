@@ -38,6 +38,14 @@ describe('HttpClient', () => {
       },
     );
 
+    it('get() sends GET without a body even when the request object carries others', async () => {
+      const fake = new FakeFetch().on('GET', 'api.cf.example.org/v3/apps', jsonResponse({}));
+      // Structural typing lets extra fields through; get() must override them.
+      const smuggled = { url: new URL('/v3/apps', api), method: 'DELETE', body: 'x' };
+      await client(fake).get(smuggled);
+      expect(fake.calls.map((c) => [c.method, c.body])).toEqual([['GET', undefined]]);
+    });
+
     it('refuses hosts that are not on the allow-list', async () => {
       const fake = new FakeFetch();
       await expect(

@@ -23,6 +23,18 @@ export interface HttpResponse {
   text: string;
 }
 
+/** A request that can only be a GET: it has no method and no body. */
+export type HttpGetRequest = Omit<HttpRequest, 'method' | 'body'>;
+
+/**
+ * The read-only view of the HTTP layer. The Cloud Foundry client is typed
+ * against it, so it has no way to send a method other than GET or a body;
+ * the allow-list refuses every other method for the CF API host as well.
+ */
+export interface ReadOnlyHttp {
+  get(req: HttpGetRequest): Promise<HttpResponse>;
+}
+
 export interface HttpClientOptions {
   policy: EgressPolicy;
   userAgent: string;
@@ -97,7 +109,7 @@ async function readBody(res: Response, url: URL, maxBytes: number): Promise<stri
  * allow-list before it is sent; redirects are never followed, so a redirect
  * cannot lead to a host the allow-list does not know.
  */
-export class HttpClient {
+export class HttpClient implements ReadOnlyHttp {
   readonly policy: EgressPolicy;
   private readonly fetchImpl: FetchLike;
   private readonly semaphore: Semaphore;
@@ -127,6 +139,11 @@ export class HttpClient {
     // Throws before anything is sent when the request is not allowed.
     this.policy.authorize(req.url, method, 'authorization' in headers);
     return this.semaphore.run(() => this.send(req, method, headers));
+  }
+
+  /** Always a GET without a body, whatever the caller's object carries. */
+  get(req: HttpGetRequest): Promise<HttpResponse> {
+    return this.request({ ...req, method: 'GET', body: undefined });
   }
 
   private async send(
