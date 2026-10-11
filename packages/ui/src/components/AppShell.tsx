@@ -14,7 +14,7 @@ import {
 } from '@ui5/webcomponents-react';
 import { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
-import logoUrl from '../assets/logo.svg';
+import logoUrl from '../assets/icon.png';
 import { formatDateTime } from '../data/format';
 import { useReport } from '../data/report';
 import { THEME_MODES, type ThemeMode, useThemeMode } from '../ui5/theme';

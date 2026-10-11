@@ -19,3 +19,4 @@
 - **Rule `APP_NO_RECENT_DEPLOY`.**
 - **Reports:** JSON, CSV (with formula-injection guard), SARIF 2.1.0, and a single-file offline HTML report. The HTML report uses React and UI5 Web Components for React with the Horizon light and dark themes. It has Overview, Apps and Findings screens and embeds the third-party licenses.
 - **Documentation:** verified data sources, rules, permissions, privacy and security policy.
+- **New logo and app icon:** a cloud-and-magnifier mark. It is the report's ShellBar logo and favicon (inlined, so the report stays one offline file), and the README, landing page and social card use it. Light and dark variants of the horizontal logo live in `docs/assets/`.
