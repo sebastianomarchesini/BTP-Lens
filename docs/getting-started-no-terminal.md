@@ -49,7 +49,7 @@ Press Ctrl+C at any time to stop; nothing is written until the scan starts.
 ## Step 4 · Answer four questions
 
 **1 · Where is your landscape?**
-Pick your region from the list by typing its number, or choose `1` and paste the **API Endpoint** from the BTP cockpit: open your subaccount, look at **Overview → Cloud Foundry Environment**, and copy the address that starts with `https://api.cf.`. BTP Lens checks that it can reach the address before going on.
+Pick your region from the list by typing its number, or choose `1` and paste the **API Endpoint** from the BTP cockpit: open your subaccount, look at **Overview → Cloud Foundry Environment**, and copy the address that starts with `https://api.cf.`. You can also type just the region, for example `eu10-004` or `us10-001.hana.ondemand.com`. BTP Lens checks that it can reach the address before going on.
 
 **2 · Sign in**
 Choose **Open a browser and sign in with my company account**. Your browser opens a page from your own landscape's login server. Sign in the way you always do (single sign-on, two-factor, whatever your company uses). The page then shows a **one-time code**. Copy it, go back to the terminal, paste it, press Enter. The code works once and is not stored anywhere.

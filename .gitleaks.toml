@@ -1,0 +1,14 @@
+# Default gitleaks rules, plus one narrow exception.
+#
+# Test fixtures carry fake "canary" secrets marked POISON (for example
+# `--db-password=POISON_hunter2` in packages/cli/test/fixtures/cf/acme/droplets.json).
+# leak tests assert that no POISON value ever reaches a report
+# (packages/cli/test/support/acme.ts). Only findings whose matched text carries
+# that marker are allowed; any other secret, in fixtures or elsewhere, is still reported.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake canary secrets in test fixtures"
+regexTarget = "match"
+regexes = ['''POISON''']

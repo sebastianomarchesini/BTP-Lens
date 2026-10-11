@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toApiEndpoint } from './guided/regions.js';
 import { ConfigError } from './http/errors.js';
 import { SEVERITIES, type Severity } from './model/severity.js';
 import { type ReportFormat, parseFormats } from './reporters/index.js';
@@ -9,7 +10,8 @@ export type FailOn = (typeof FAIL_ON_VALUES)[number];
 export const ApiUrlSchema = z
   .string()
   .trim()
-  .transform((value, ctx) => {
+  .transform((input, ctx) => {
+    const value = toApiEndpoint(input);
     try {
       const url = new URL(/^[a-z]+:\/\//i.test(value) ? value : `https://${value}`);
       if (url.protocol !== 'https:') {
