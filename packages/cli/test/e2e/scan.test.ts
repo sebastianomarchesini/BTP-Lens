@@ -16,6 +16,33 @@ function scanAcme(fake = acmeFetch(), overrides: { deep?: boolean } = {}) {
 }
 
 describe('scan against the acme fixture landscape', () => {
+  it('stops with a role hint when the org is visible but none of its spaces', async () => {
+    await expect(scanAcme(acmeFetch({ noVisibleSpaces: true }))).rejects.toThrow(
+      /none of its spaces[\s\S]*Space Auditor/,
+    );
+  });
+
+  it('matches the org name exactly, because `names` is a comma-separated list filter', async () => {
+    const fake = acmeFetch();
+    await expect(
+      scan({
+        apiUrl: ACME.api,
+        org: 'acme-prod,other',
+        deep: false,
+        probeRoutes: true,
+        concurrency: 5,
+        env: { BTP_LENS_ACCESS_TOKEN: ACME.token },
+        fetch: fake.fetch,
+        now: () => ACME.now,
+      }),
+    ).rejects.toThrow(/not found/);
+  });
+
+  it('records that no route was probed, whatever the flag said', async () => {
+    const snapshot = await scanAcme();
+    expect(snapshot.options.probeRoutes).toBe(false);
+  });
+
   it('collects the full inventory across paginated responses', async () => {
     const snapshot = await scanAcme();
     expect(snapshot.apps).toHaveLength(8);

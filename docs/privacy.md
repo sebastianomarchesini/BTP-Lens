@@ -11,16 +11,18 @@ BTP Lens runs on your machine and writes files to your disk. This page lists wha
 
 ## Where requests go
 
-| Host | Why | What is sent |
-| --- | --- | --- |
-| Your CF API (`--api`) | inventory | `GET` only, with your token |
-| Your UAA or login server (from the CF root) | token refresh or client credentials | `POST /oauth/token` only |
-| Your log cache | from v0.2 | `GET` only |
-| `api.osv.dev` | known vulnerabilities | public package names and versions from your SBOM |
-| `endoflife.date` | runtime end-of-life dates | product names such as `nodejs` |
-| `ui5.sap.com` | UI5 maintenance status | a request for `/versionoverview.json` |
-| `registry.npmjs.org` | current `@sap/*` versions | four fixed package names |
-| Your app routes | the UI5 version served | one unauthenticated `GET /resources/sap-ui-version.json` per app, with no redirects; turn it off with `--no-probe-routes` |
+**In 0.1.0 only the first two rows are used.** The other hosts are already in the allow-list for the rules of the next releases, so that adding a rule can never add a destination unnoticed, but nothing contacts them yet.
+
+| Host | Why | What is sent | Status |
+| --- | --- | --- | --- |
+| Your CF API (`--api`) | inventory | `GET` only, with your token | 0.1.0 |
+| Your UAA or login server (from the CF root) | sign-in, token refresh or client credentials | `POST /oauth/token` only | 0.1.0 |
+| Your log cache | request metrics | `GET` only | planned (v0.2) |
+| `api.osv.dev` | known vulnerabilities | public package names and versions from your SBOM | planned |
+| `endoflife.date` | runtime end-of-life dates | product names such as `nodejs` | planned |
+| `ui5.sap.com` | UI5 maintenance status | a request for `/versionoverview.json` | planned |
+| `registry.npmjs.org` | current `@sap/*` versions | four fixed package names | planned |
+| Your app routes | the UI5 version served | one unauthenticated `GET /resources/sap-ui-version.json` per app, with no redirects; `--no-probe-routes` will turn it off | planned; 0.1.0 makes no request to app routes |
 
 Your CF token is sent to the CF API only. The allow-list refuses an `Authorization` header to any other host.
 

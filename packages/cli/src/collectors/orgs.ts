@@ -16,7 +16,8 @@ const CfSpaceSchema = z.object({
 /** GET /v3/organizations?names=<org>. Any role; zero results = not visible. */
 export async function resolveOrg(cf: CfClient, name: string): Promise<RawOrg> {
   const { resources } = await cf.list('/v3/organizations', CfOrgSchema, { names: name });
-  const org = resources[0];
+  // `names` is a comma-separated list filter, so match the exact name again.
+  const org = resources.find((o) => o.name === name);
   if (org === undefined) {
     throw new ConfigError(`Organization "${name}" was not found, or your user has no role in it.`);
   }
@@ -31,7 +32,8 @@ export async function listSpaces(
 ): Promise<RawSpace[]> {
   const query: Record<string, string> = { organization_guids: org.guid };
   if (spaceName !== undefined) query.names = spaceName;
-  const { resources } = await cf.list('/v3/spaces', CfSpaceSchema, query);
+  const { resources: all } = await cf.list('/v3/spaces', CfSpaceSchema, query);
+  const resources = spaceName === undefined ? all : all.filter((s) => s.name === spaceName);
   if (spaceName !== undefined && resources.length === 0) {
     throw new ConfigError(
       `Space "${spaceName}" was not found in "${org.name}", or your user has no role in it.`,

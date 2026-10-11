@@ -23,6 +23,21 @@ const have = (n: number) => (n === 1 ? 'has' : 'have');
 const use = (n: number) => (n === 1 ? 'uses' : 'use');
 const apps = (n: number) => `${n} app${n === 1 ? '' : 's'}`;
 
+type Scope = ReportData['scope'];
+
+/** "acme-prod", or "acme-prod / prod" when the scan was limited to spaces. */
+export function scopeLabel(scope: Scope): string {
+  const orgs = scope.orgs.join(', ');
+  return scope.spaces?.length ? `${orgs} / ${scope.spaces.join(', ')}` : orgs;
+}
+
+/** "acme-prod", or "space prod of acme-prod" for a sentence. */
+export function scopePhrase(scope: Scope): string {
+  const orgs = scope.orgs.join(', ');
+  if (!scope.spaces?.length) return orgs;
+  return `space${scope.spaces.length === 1 ? '' : 's'} ${scope.spaces.join(', ')} of ${orgs}`;
+}
+
 /**
  * Three to four sentences a manager can read without knowing Cloud Foundry.
  * Everything is computed from the report data, so it is always true of the
@@ -30,7 +45,7 @@ const apps = (n: number) => `${n} app${n === 1 ? '' : 's'}`;
  */
 export function startHereSentences(data: ReportData): string[] {
   const sentences: string[] = [];
-  const where = data.scope.orgs.join(', ');
+  const where = scopePhrase(data.scope);
   sentences.push(
     `${apps(data.summary.apps)} in ${where} ${were(data.summary.apps)} scanned on ${formatDate(data.scannedAt)}.`,
   );

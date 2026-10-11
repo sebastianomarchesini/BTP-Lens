@@ -15,14 +15,20 @@ software. Every generated report embeds the complete list of bundled packages
 with their license texts in a comment at the top of the file. The npm package
 ships the same list as dist/THIRD_PARTY_LICENSES.md.
 
-Licensing check (2026-09-29): the report bundles 42 packages. All of them are
+Licensing check (2026-10-11): the report bundles 42 packages. All of them are
 licensed under Apache-2.0, MIT, ISC or BSD-3-Clause, and these licenses allow
 redistribution in a single-file report when the license notices are included.
 None of the Apache-2.0 packages ships a NOTICE file that needs to be carried
-over. The bundled packages include:
+over. Two packages vendor third-party material under another license; both
+notices are embedded in every report and in THIRD_PARTY_LICENSES.md. The
+bundled packages include:
 
 - UI5 Web Components, UI5 Web Components for React and their charts, icons,
   localization and theming packages (Apache-2.0)
+  - @ui5/webcomponents-base vendors Preact (MIT, Copyright (c) 2015-present
+    Jason Miller)
+  - @ui5/webcomponents-localization vendors Unicode CLDR locale data
+    (Unicode License v3, Copyright (c) 1991-2024 Unicode, Inc.)
 - SAP Theming Base Content, including the "72" font files (Apache-2.0)
 - React, React DOM, React Router, TanStack Query and TanStack Virtual (MIT)
 - Recharts and its dependencies (MIT); D3 modules and internmap (ISC);

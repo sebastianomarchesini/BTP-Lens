@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/sebastianomarchesini/BTP-Lens/security/advisories/new
     about: Please report security problems privately here, never as a public issue.
   - name: Question or "how do I…"
-    url: https://github.com/sebastianomarchesini/BTP-Lens/discussions
-    about: Ask in Discussions. Non-developers welcome, no question is too basic.
+    url: https://github.com/sebastianomarchesini/BTP-Lens/issues/new?labels=question&title=Question%3A%20
+    about: Open an issue with the "question" label. Non-developers welcome, no question is too basic.

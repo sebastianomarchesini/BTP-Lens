@@ -12,13 +12,15 @@ import {
   Tab,
   TabContainer,
 } from '@ui5/webcomponents-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import logoUrl from '../assets/icon.png';
 import { formatDateTime } from '../data/format';
 import { useReport } from '../data/report';
+import { scopeLabel } from '../data/summary';
 import { THEME_MODES, type ThemeMode, useThemeMode } from '../ui5/theme';
 import { EmptyState } from './EmptyState';
+import { ErrorBoundary } from './ErrorBoundary';
 
 const TABS = [
   { path: '/', label: 'Overview' },
@@ -30,40 +32,36 @@ function isThemeMode(value: string | undefined): value is ThemeMode {
   return THEME_MODES.some((m) => m.mode === value);
 }
 
-function ThemeMenu() {
+/**
+ * The theme menu lives outside the ShellBar on purpose: a Menu placed as a
+ * ShellBar child lands in no slot and renders with no size, so it can never
+ * be seen or clicked. The ShellBarItem inside the bar only opens it.
+ */
+function ThemeMenu({ opener, onClose }: { opener: HTMLElement | null; onClose: () => void }) {
   const [mode, setMode] = useThemeMode();
-  const [opener, setOpener] = useState<HTMLElement | null>(null);
   return (
-    <>
-      <ShellBarItem
-        icon="palette"
-        text="Theme"
-        accessibilityAttributes={{ hasPopup: 'menu', expanded: opener !== null }}
-        onClick={(event) => setOpener(event.detail.targetRef)}
-      />
-      <Menu
-        open={opener !== null}
-        opener={opener}
-        headerText="Theme"
-        onClose={() => setOpener(null)}
-        onItemClick={(event) => {
-          const next = event.detail.item.dataset.mode;
-          if (isThemeMode(next)) setMode(next);
-        }}
-      >
-        <MenuItemGroup checkMode="Single">
-          {THEME_MODES.map((option) => (
-            <MenuItem
-              key={option.mode}
-              text={option.label}
-              icon={option.icon}
-              checked={option.mode === mode}
-              data-mode={option.mode}
-            />
-          ))}
-        </MenuItemGroup>
-      </Menu>
-    </>
+    <Menu
+      open={opener !== null}
+      opener={opener ?? undefined}
+      headerText="Theme"
+      onClose={onClose}
+      onItemClick={(event) => {
+        const next = event.detail.item.dataset.mode;
+        if (isThemeMode(next)) setMode(next);
+      }}
+    >
+      <MenuItemGroup checkMode="Single">
+        {THEME_MODES.map((option) => (
+          <MenuItem
+            key={option.mode}
+            text={option.label}
+            icon={option.icon}
+            checked={option.mode === mode}
+            data-mode={option.mode}
+          />
+        ))}
+      </MenuItemGroup>
+    </Menu>
   );
 }
 
@@ -72,6 +70,23 @@ export function AppShell() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const data = report.data ?? null;
+  const [themeOpener, setThemeOpener] = useState<HTMLElement | null>(null);
+  const section = TABS.find((tab) => tab.path === pathname)?.label ?? 'Report';
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+
+  // One document title and one page heading per section, and focus moved to the
+  // page on navigation: a title change alone is not announced in a single-page app.
+  useEffect(() => {
+    document.title = `${section} · BTP Lens report`;
+  }, [section]);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    mainRef.current?.focus();
+  }, [pathname]);
 
   let content;
   if (report.isPending) {
@@ -93,7 +108,11 @@ export function AppShell() {
       />
     );
   } else {
-    content = <Outlet context={data} />;
+    content = (
+      <ErrorBoundary resetKey={pathname}>
+        <Outlet context={data} />
+      </ErrorBoundary>
+    );
   }
 
   return (
@@ -101,13 +120,19 @@ export function AppShell() {
       <ShellBar
         primaryTitle="BTP Lens"
         secondaryTitle={
-          data ? `${data.scope.orgs.join(', ')} · ${formatDateTime(data.scannedAt)}` : undefined
+          data ? `${scopeLabel(data.scope)} · ${formatDateTime(data.scannedAt)}` : undefined
         }
         logo={<img src={logoUrl} alt="BTP Lens home" width={32} height={32} />}
         onLogoClick={() => void navigate('/')}
       >
-        <ThemeMenu />
+        <ShellBarItem
+          icon="palette"
+          text="Theme"
+          accessibilityAttributes={{ hasPopup: 'menu', expanded: themeOpener !== null }}
+          onClick={(event) => setThemeOpener(event.detail.targetRef)}
+        />
       </ShellBar>
+      <ThemeMenu opener={themeOpener} onClose={() => setThemeOpener(null)} />
       {data && (
         <nav aria-label="Report sections">
           <TabContainer
@@ -128,7 +153,12 @@ export function AppShell() {
           </TabContainer>
         </nav>
       )}
-      <main className="page">{content}</main>
+      <main className="page" ref={mainRef} tabIndex={-1} aria-labelledby="page-title">
+        <h1 id="page-title" className="visually-hidden">
+          {data ? `${section} · ${scopeLabel(data.scope)}` : section}
+        </h1>
+        {content}
+      </main>
       <footer className="footer">
         {data
           ? `${data.tool.name} ${data.tool.version} · read-only scan of ${data.scope.apiEndpoint} · `

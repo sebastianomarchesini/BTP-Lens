@@ -4,9 +4,9 @@ Public and revised at every minor release. Ordered, not dated: dates depend on h
 
 Propose a change by opening an issue. Rules go through the "Rule proposal" template.
 
-## v0.1 (in progress)
+## v0.1
 
-Done on the development branches:
+Released as 0.1.0 on 2026-10-10:
 
 - [x] GET-only Cloud Foundry client with an egress allow-list and tests
 - [x] App inventory, current droplets, `APP_NO_RECENT_DEPLOY`
@@ -14,14 +14,25 @@ Done on the development branches:
 - [x] Guided mode (`btp-lens` with no arguments), `btp-lens doctor`, "Start here" panel
 - [x] Security review, disclosure policy, CSP-protected report, CI with gitleaks, CodeQL and Scorecard
 
-Still to do before tagging 0.1.0:
+Moved to the 0.1.x and 0.2 releases:
 
 - [ ] Rules: `RUNTIME_NODE_EOL`, `RUNTIME_JAVA_EOL` (endoflife.date), `BUILDPACK_OUTDATED`, `STACK_DEPRECATED`, `APP_IDLE`, `UI5_OUT_OF_MAINTENANCE`, `SAP_PKG_OUTDATED`, `DEP_KNOWN_CVE` (OSV.dev), `ENV_SECRET_PLAINTEXT` (`--deep`)
 - [ ] `btp-lens sbom` from `package-lock.json`, `pom.xml`, `mta.yaml` and `.mtar`
 - [ ] `report --redact` so people can share screenshots
 - [ ] Route probe for the UI5 version with the SSRF guards from the security review
 - [ ] Three usability sessions with non-developers
-- [ ] npm publish with provenance; GitHub release with changelog
+- [x] npm publish with provenance; GitHub release with changelog (tag-triggered `release.yml`)
+
+## v0.1.1
+
+Small items left open by the [pre-release audit](audits/2026-10-11-release-0.1.0-audit.md), all low severity; each is a self-contained change with a test:
+
+- Findings page: virtualize the list (it freezes for seconds above about 1500 findings)
+- Report accessibility: live region for filter result counts, forced-colors styling of the selected severity filter, a text alternative for the severity chart, distinct card landmark names, a print stylesheet
+- Proxy and Windows: Windows syntax for `HTTPS_PROXY`, `NODE_USE_ENV_PROXY` and `NODE_EXTRA_CA_CERTS` in README and the hints; say that the certificate file must be PEM; a plain message instead of Node's stack trace when the proxy URL is malformed; read `HOMEDRIVE`/`HOMEPATH` like the cf CLI when looking for its config
+- Analyzer: an invalid droplet timestamp must not produce "NaN months ago" or an unloadable snapshot; note on future-dated droplets
+- CLI: retry budget and hints for 407 and TLS failures during a scan; `--api` with a trailing path; guided-mode messages that mention `--api`; verify an existing cf CLI session with one API call before accepting it; swallow input typed while the wizard is busy; `report --from` on a non-regular file; a hint on 403 at the bootstrap org lookup; clearer messages for an empty `--out` and non-snapshot JSON
+- Getting-started guide: the report folder is relative to the terminal's current directory
 
 ## v0.2
 
@@ -49,7 +60,7 @@ Each of these is scoped to one file, one test and one doc line, and a maintainer
 
 1. ~~Print a one-line "reports contain internal details, do not commit them" warning after `scan` (SEC-22).~~ Done 2026-10-03.
 2. Add a fixture-linter test that fails on e-mail addresses, JWTs, real BTP hostnames and IP addresses in `packages/cli/test/fixtures`.
-3. Add `npm pack --dry-run` to CI and assert that only `dist`, `README.md`, `LICENSE` and `NOTICE` ship.
+3. ~~Add `npm pack --dry-run` to CI and assert that only `dist`, `README.md`, `LICENSE` and `NOTICE` ship.~~ Done in the release workflow 2026-10-10; still worth adding to `ci.yml`.
 4. `btp-lens doctor`: add the role check (list spaces visible in the target org when a session exists).
 5. Guided mode: remember the last API endpoint and org in `~/.config/btp-lens/last-scan.json` (never the token) and offer "run the same scan again"; add `btp-lens reset`.
 6. Report: a glossary page (org, space, buildpack, droplet, stack, runtime, EOL, SBOM, CVE, one sentence each).

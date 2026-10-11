@@ -7,7 +7,7 @@ Thanks for helping improve BTP Lens. It is an open-source project in the plain s
 - **Test guided mode** on a trial account and tell us where you hesitated (open a Discussion, label `ux`).
 - **Propose a rule** with the "Rule proposal" issue template. You describe the problem; someone else can implement it.
 - **Improve the docs**: fix a sentence, add a screenshot, translate `docs/getting-started-no-terminal.md`.
-- **Answer questions** in Discussions. Non-developers helping non-developers is the best thing that can happen here.
+- **Answer questions** in the issues labelled `question`. Non-developers helping non-developers is the best thing that can happen here.
 - **Share a redacted report** (once `report --redact` exists) so we can see real-world shapes.
 
 ## Your first code contribution in 15 minutes
@@ -31,9 +31,13 @@ A rule is one analyzer file, one test, and one section in `docs/rules.md`:
 
 ## Contributor License Agreement (required)
 
-Every contribution needs a signed **Contributor License Agreement (CLA)** before it can be merged. The CLA confirms that you have the right to contribute your change, and that the project may distribute it under the Apache License 2.0.
+Every contribution needs a signed **Contributor License Agreement (CLA)** before it can be merged. The CLA confirms that you have the right to contribute your change, and that the project may distribute it under the Apache License 2.0. The text is in [docs/CLA.md](docs/CLA.md); it follows the Apache Software Foundation's individual CLA.
 
-The CLA text and the automatic check that asks first-time contributors to sign are still being set up. Until they are, a maintainer will send you the CLA before merging. Pull requests without a signed CLA are not merged.
+To sign it, post this comment on your first pull request, with your name:
+
+> I have read the Contributor License Agreement in docs/CLA.md and I agree to it. — Full Name
+
+A maintainer records the signature in `docs/cla-signatures.md` (GitHub user name and date, nothing else) before merging. If you contribute as part of your job, make sure your employer agrees; section 4 of the CLA explains what that means. An automatic check will replace the manual step later; signatures given before that stay valid.
 
 ## Ground rules
 

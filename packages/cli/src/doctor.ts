@@ -44,7 +44,11 @@ function checkNode(version: string): DoctorCheck {
   };
 }
 
-async function checkApi(api: URL, fetchImpl: FetchLike | undefined): Promise<DoctorCheck> {
+async function checkApi(
+  api: URL,
+  fetchImpl: FetchLike | undefined,
+  nodeVersion: string | undefined,
+): Promise<DoctorCheck> {
   const policy = new EgressPolicy();
   policy.add(cfApiRule(api));
   const http = new HttpClient({
@@ -63,7 +67,10 @@ async function checkApi(api: URL, fetchImpl: FetchLike | undefined): Promise<Doc
       detail: `${api.host} answered in ${Date.now() - started} ms`,
     };
   } catch (error) {
-    const [detail, fix] = explainConnectionError(error, api).split('\n');
+    const [detail, fix] = explainConnectionError(error, api, {
+      suggestDoctor: false,
+      nodeVersion,
+    }).split('\n');
     return {
       name: 'Cloud Foundry API',
       ok: false,
@@ -153,7 +160,7 @@ export async function runDoctor(o: DoctorOptions): Promise<DoctorCheck[]> {
       // Reported by checkCfSession.
     }
   }
-  if (api) checks.push(await checkApi(api, o.fetch));
+  if (api) checks.push(await checkApi(api, o.fetch, o.nodeVersion));
   else {
     checks.push({
       name: 'Cloud Foundry API',

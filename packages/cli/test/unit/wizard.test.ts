@@ -4,7 +4,15 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ScriptedPrompter } from '../../src/guided/prompt.js';
 import { REGIONS } from '../../src/guided/regions.js';
-import { explainConnectionError, reportDirName, runWizard } from '../../src/guided/wizard.js';
+import { HttpNetworkError } from '../../src/http/errors.js';
+import type { CfRoot } from '../../src/http/cfClient.js';
+import {
+  explainConnectionError,
+  loginBaseOf,
+  proxyAdvice,
+  reportDirName,
+  runWizard,
+} from '../../src/guided/wizard.js';
 import { ACME, acmeFetch } from '../support/acme.js';
 import { FakeFetch, jsonResponse } from '../support/fakeFetch.js';
 
@@ -193,6 +201,66 @@ describe('explainConnectionError', () => {
     ).toMatch(/could not be found/);
     expect(explainConnectionError(new Error('fetch failed'), api)).toMatch(/HTTPS_PROXY/);
     expect(explainConnectionError(new Error('CF API 500'), api)).toMatch(/btp-lens doctor/);
+    expect(explainConnectionError(new Error('CF API 403 for https://x/'), api)).toMatch(
+      /proxy or firewall/,
+    );
+    expect(
+      explainConnectionError(new Error('CF API 500'), api, { suggestDoctor: false }),
+    ).not.toMatch(/doctor/);
+  });
+
+  it('sees through "fetch failed" to the real cause that Node hides in the cause chain', () => {
+    const undici = (message: string, code: string) =>
+      new HttpNetworkError(
+        api,
+        new TypeError('fetch failed', { cause: Object.assign(new Error(message), { code }) }),
+      );
+    const tls = undici('self-signed certificate', 'DEPTH_ZERO_SELF_SIGNED_CERT');
+    expect(tls.code).toBe('DEPTH_ZERO_SELF_SIGNED_CERT');
+    expect(explainConnectionError(tls, api)).toMatch(/NODE_EXTRA_CA_CERTS/);
+    expect(
+      explainConnectionError(
+        undici('unable to verify the first certificate', 'UNABLE_TO_VERIFY_LEAF_SIGNATURE'),
+        api,
+      ),
+    ).toMatch(/NODE_EXTRA_CA_CERTS/);
+    expect(
+      explainConnectionError(undici('getaddrinfo ENOTFOUND api.cf.example.org', 'ENOTFOUND'), api),
+    ).toMatch(/could not be found/);
+    expect(
+      explainConnectionError(undici('connect ECONNREFUSED 127.0.0.1:443', 'ECONNREFUSED'), api),
+    ).toMatch(/could not be reached/);
+    expect(
+      explainConnectionError(
+        undici('Proxy response (407) !== 200 when HTTP Tunneling', 'UND_ERR_PROXY'),
+        api,
+      ),
+    ).toMatch(/proxy or firewall/);
+  });
+
+  it('only recommends NODE_USE_ENV_PROXY on a Node.js that has it (22.21+, 24+)', () => {
+    expect(proxyAdvice('22.12.0')).toMatch(/upgrade Node.js to 24/);
+    expect(proxyAdvice('22.21.0')).not.toMatch(/upgrade/);
+    expect(proxyAdvice('24.9.0')).toMatch(/^set HTTPS_PROXY/);
+    expect(
+      explainConnectionError(new Error('fetch failed'), api, { nodeVersion: '22.18.0' }),
+    ).toMatch(/upgrade Node.js to 24/);
+  });
+});
+
+describe('loginBaseOf', () => {
+  const root = (href?: string) =>
+    ({ links: href === undefined ? {} : { login: { href } } }) as unknown as CfRoot;
+  it('accepts only a plain https login server from the CF root', () => {
+    expect(loginBaseOf(root('https://login.cf.example.org/'))).toBe('https://login.cf.example.org');
+    expect(loginBaseOf(root('https://login.cf.example.org/uaa/?x=1#f'))).toBe(
+      'https://login.cf.example.org/uaa',
+    );
+    expect(loginBaseOf(root('http://login.cf.example.org'))).toBeUndefined();
+    expect(loginBaseOf(root('https://user:pw@login.cf.example.org'))).toBeUndefined();
+    expect(loginBaseOf(root('javascript:alert(1)'))).toBeUndefined();
+    expect(loginBaseOf(root('not a url'))).toBeUndefined();
+    expect(loginBaseOf(root())).toBeUndefined();
   });
 });
 

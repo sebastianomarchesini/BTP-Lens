@@ -18,7 +18,7 @@ Because the Cloud Foundry API only answers people with a role. BTP Lens uses you
 
 ### What leaves my machine?
 
-Requests to your CF API and login server, and to `api.osv.dev`, `endoflife.date`, `ui5.sap.com` and `registry.npmjs.org` for public version data. The full list, with what is sent to each, is in [privacy.md](privacy.md). The HTML report itself carries a Content Security Policy with `connect-src 'none'`, so even the browser refuses to let it connect anywhere.
+In 0.1.0, requests go to your CF API and its login server only. The rules of the next releases add public version and vulnerability lookups at `api.osv.dev`, `endoflife.date`, `ui5.sap.com` and `registry.npmjs.org`; those hosts are already in the allow-list but are not contacted yet. The full list, with what is sent to each, is in [privacy.md](privacy.md). The HTML report itself carries a Content Security Policy with `connect-src 'none'`, so even the browser refuses to let it connect anywhere.
 
 ### It says my role is insufficient. What now?
 
@@ -26,7 +26,7 @@ You can see the org but not the spaces, or a check was skipped. Ask your adminis
 
 ### Can I share the report?
 
-Yes, it is one file that works without a network. It contains your org, space, app and route names, so treat it like any internal document. A `--redact` option that replaces those names with stable placeholders is planned for v0.1 so that screenshots can be shared publicly.
+Yes, it is one file that works without a network. It contains your org, space, app and route names, so treat it like any internal document. A `--redact` option that replaces those names with stable placeholders is planned for a later release (see the [roadmap](roadmap.md)) so that screenshots can be shared publicly.
 
 ### Is this an SAP product?
 

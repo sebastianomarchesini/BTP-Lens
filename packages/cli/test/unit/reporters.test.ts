@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderAppsCsv, renderFindingsCsv, csvCell } from '../../src/reporters/csv.js';
+import { CSV_BOM, renderAppsCsv, renderFindingsCsv, csvCell } from '../../src/reporters/csv.js';
 import { DATA_PLACEHOLDER, renderHtml, scriptSafeJson } from '../../src/reporters/html.js';
 import { parseFormats } from '../../src/reporters/index.js';
 import { toReportData } from '../../src/reporters/reportData.js';
@@ -45,13 +45,28 @@ describe('csvCell', () => {
 describe('CSV reports', () => {
   it('writes one row per finding and per app', async () => {
     const data = await acmeReport();
-    const findings = renderFindingsCsv(data).trimEnd().split('\r\n');
+    const findings = renderFindingsCsv(data).slice(CSV_BOM.length).trimEnd().split('\r\n');
     expect(findings[0]).toBe(
       'rule_id,severity,title,org,space,app,app_guid,remediation,references,evidence',
     );
     expect(findings).toHaveLength(1 + data.findings.length);
-    const apps = renderAppsCsv(data).trimEnd().split('\r\n');
+    const apps = renderAppsCsv(data).slice(CSV_BOM.length).trimEnd().split('\r\n');
     expect(apps).toHaveLength(1 + 8);
+  });
+
+  it('starts with a UTF-8 byte-order mark so that Excel reads non-ASCII names', async () => {
+    const data = await acmeReport();
+    for (const text of [renderFindingsCsv(data), renderAppsCsv(data)]) {
+      expect(text.startsWith(CSV_BOM)).toBe(true);
+      expect([...Buffer.from(text, 'utf8').subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+      expect(text.indexOf(CSV_BOM, 1)).toBe(-1);
+    }
+  });
+
+  it('drops control characters from cells but keeps tabs and line breaks quoted', () => {
+    expect(csvCell('a\x00b\x07c\x7fd')).toBe('abcd');
+    expect(csvCell('two\nlines')).toBe('"two\nlines"');
+    expect(csvCell('\x1b[31mred')).toBe('[31mred');
   });
 });
 
