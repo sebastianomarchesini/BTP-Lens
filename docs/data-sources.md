@@ -67,13 +67,15 @@ audit_events:     { cutoff_age_in_days: 31 }
 
 All endpoints are **GET**. "SA" = Space Auditor; "SD" = Space Developer.
 
+**Status in 0.1.0:** the bootstrap calls, `apps.ts` and `droplets.ts` are implemented and are the only CF calls the scan makes. The other rows are verified endpoints for the collectors of the next releases; nothing calls them yet.
+
 | Collector | Endpoint | Key fields used | Min. role | SA? | Notes |
 |---|---|---|---|---|---|
 | (bootstrap) | `GET /` | `links.uaa`, `links.login`, `links.log_cache` | none | ✅ | Unauthenticated. |
 | (bootstrap) | `GET /v3/organizations?names=<org>` | `guid`, `name` | any role | ✅ | 0 results means "org not found or not visible", exit code 2. |
 | (bootstrap) | `GET /v3/spaces?organization_guids=<g>[&names=<space>]` | `guid`, `name`, `relationships.organization` | any role | ✅ | Filtered to visible spaces. |
-| `apps.ts` | `GET /v3/apps?space_guids=…&include=space.organization&per_page=5000` | `guid`, `name`, `state` (`STARTED`/`STOPPED`), `created_at`, `updated_at`, `lifecycle.type` (`buildpack`/`cnb`/`docker`), `lifecycle.data.buildpacks[]`, `lifecycle.data.stack`, `relationships.space`, `relationships.current_droplet` | any role | ✅ | `lifecycle.data.buildpacks` may be `[]` and `stack` may be `null` for old records. |
-| `droplets.ts` | `GET /v3/droplets?space_guids=…&current=true&per_page=5000` | `guid`, `state`, `created_at`, `lifecycle.data.buildpacks[].{name,buildpack_name,version,detect_output}`, `stack`, `relationships.app` | any role | ✅ | One call instead of N× `/v3/apps/:guid/droplets/current`. `GET /v3/droplets/:guid` notes "some fields are redacted" for SA. ⚠️ The exact redacted fields are not documented; we do not rely on `execution_metadata` or `process_types`. Docker droplets have `image` and no buildpacks. |
+| `apps.ts` | `GET /v3/apps?organization_guids=<org>&per_page=5000` (`space_guids=<space>` with `--space`) | `guid`, `name`, `state` (`STARTED`/`STOPPED`), `created_at`, `updated_at`, `lifecycle.type` (`buildpack`/`cnb`/`docker`), `lifecycle.data.buildpacks[]`, `lifecycle.data.stack`, `relationships.space`, `relationships.current_droplet` | any role | ✅ | `lifecycle.data.buildpacks` may be `[]` and `stack` may be `null` for old records. |
+| `droplets.ts` | `GET /v3/droplets?organization_guids=<org>&current=true&per_page=5000` (`space_guids=<space>` with `--space`) | `guid`, `state`, `created_at`, `updated_at`, `lifecycle.type`, `buildpacks[].{name,buildpack_name,version,detect_output}` (top-level on droplets, unlike apps), `stack`, `image`, `relationships.app` | any role | ✅ | One call instead of N× `/v3/apps/:guid/droplets/current`. `GET /v3/droplets/:guid` notes "some fields are redacted" for SA. ⚠️ The exact redacted fields are not documented; we do not rely on `execution_metadata` or `process_types`. Docker droplets have `image` and no buildpacks. |
 | `processes.ts` | `GET /v3/processes?space_guids=…&per_page=5000` | `type`, `instances`, `memory_in_mb`, `disk_in_mb`, `health_check.type`, `updated_at`, `relationships.app` | any role | ✅ | |
 | `processes.ts` | `GET /v3/processes/:guid/stats` | `state` (`RUNNING`/`CRASHED`/`STARTING`/`STOPPING`/`DOWN`), `uptime`, `usage.{cpu,mem,disk}`, `mem_quota` | SA (redacted) | ✅ | "Some fields are redacted" for SA. ⚠️ Treat `host`, `instance_internal_ip` and `instance_ports` as possibly missing. **Never** written to reports (infrastructure detail). Only called for `STARTED` apps. |
 | `buildpacks.ts` | `GET /v3/buildpacks?per_page=5000` | `name`, `stack`, `state`, `enabled`, `position`, `filename`, `lifecycle`, `updated_at` | any role | ✅ | ⚠️ **There is no `version` field.** The platform's current version must be parsed from `filename` (e.g. `nodejs_buildpack-cflinuxfs4-v1.8.40.zip`). If parsing fails, `BUILDPACK_OUTDATED` falls back to comparing the droplet's `created_at` with the buildpack's `updated_at`, at lower confidence. |
@@ -185,7 +187,7 @@ Mitigation for report mode:
 | `--api` host | GET | user flag |
 | `links.uaa` host | POST `/oauth/token` only | CF root |
 | `links.log_cache` host | GET (v0.2) | CF root |
-| mapped app route hosts in the scanned org | GET `/resources/sap-ui-version.json` only, no auth header, no redirects | CF routes |
+| mapped app route hosts in the scanned org | GET `/resources/sap-ui-version.json` only, no auth header, no redirects (planned; not called in 0.1.0) | CF routes |
 | `api.osv.dev` | POST `/v1/querybatch`, GET `/v1/vulns/*` | fixed |
 | `endoflife.date` | GET `/api/v1/products/*` | fixed |
 | `ui5.sap.com` | GET `/versionoverview.json` | fixed |

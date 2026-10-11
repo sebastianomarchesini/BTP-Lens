@@ -22,6 +22,24 @@ function packageRoot(id: string): string | undefined {
 const LICENSE_NAME = /^licen[cs]e(\.(md|txt))?$/i;
 const OVERRIDES = resolve(import.meta.dirname, 'licenses');
 
+/**
+ * Third-party code or data vendored inside a package under a different
+ * license than the package itself. `file` is read from the package, `override`
+ * from ./licenses. The build fails if one is missing, so a notice cannot
+ * disappear silently when a dependency is updated.
+ */
+const VENDORED_NOTICES: Record<string, { title: string; file?: string; override?: string }[]> = {
+  '@ui5/webcomponents-localization': [
+    {
+      title: 'Unicode CLDR locale data (Unicode-3.0)',
+      file: 'dist/generated/assets/cldr/Unicode-Data-Files-LICENSE.txt',
+    },
+  ],
+  '@ui5/webcomponents-base': [
+    { title: 'Preact (MIT, Jason Miller)', override: '@ui5__webcomponents-base.preact.LICENSE' },
+  ],
+};
+
 async function findLicense(dir: string): Promise<string | undefined> {
   try {
     const file = (await readdir(dir)).find((f) => LICENSE_NAME.test(f));
@@ -46,6 +64,13 @@ async function licenseText(root: string, name: string): Promise<string | undefin
   for (const sub of await readdir(join(root, 'lib-vendor')).catch(() => [] as string[])) {
     const text = await findLicense(join(root, 'lib-vendor', sub));
     if (text) vendored.push(`### Vendored ${sub}\n\n${text}`);
+  }
+  for (const notice of VENDORED_NOTICES[name] ?? []) {
+    const path = notice.file ? join(root, notice.file) : join(OVERRIDES, notice.override ?? '');
+    const text = await readFile(path, 'utf8').catch(() => {
+      throw new Error(`Missing vendored license notice for ${name}: ${path}`);
+    });
+    vendored.push(`### Vendored ${notice.title}\n\n${text.trim()}`);
   }
   return [own, ...vendored].filter(Boolean).join('\n\n') || undefined;
 }

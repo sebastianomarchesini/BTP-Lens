@@ -23,6 +23,19 @@ describe('stripControlCharacters', () => {
 });
 
 describe('redactSecrets', () => {
+  it('redacts Basic credentials and the cf CLI config field names', () => {
+    // Canary values carry POISON, the marker .gitleaks.toml allows for fakes.
+    expect(redactSecrets('Authorization: Basic POISON-dXNlcjpwYXNz')).toBe(
+      'Authorization: Basic [redacted]',
+    );
+    expect(redactSecrets('"RefreshToken":"POISON-refresh-1","Target":"https://api"')).toBe(
+      '"RefreshToken":"[redacted]","Target":"https://api"',
+    );
+    expect(redactSecrets('UAAOAuthClientSecret=POISON-client-secret')).toBe(
+      'UAAOAuthClientSecret=[redacted]',
+    );
+  });
+
   it('redacts JWTs and bearer tokens wherever they appear', () => {
     expect(redactSecrets(`token ${jwt} rejected`)).toBe('token [redacted-token] rejected');
     expect(redactSecrets('Authorization: bearer abcdefghijklmnop')).toBe(

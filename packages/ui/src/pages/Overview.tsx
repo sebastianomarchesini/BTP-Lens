@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext } from 'react-router';
 import { EmptyState } from '../components/EmptyState';
 import { SeverityChart } from '../components/SeverityChart';
 import { SEVERITY_LABEL, SEVERITY_STATE } from '../data/severity';
-import { startHereSentences } from '../data/summary';
+import { scopeLabel, startHereSentences } from '../data/summary';
 
 interface Kpi {
   label: string;
@@ -27,7 +27,7 @@ export function Overview() {
   const navigate = useNavigate();
   const s = data.summary.findingsBySeverity;
   const kpis: Kpi[] = [
-    { label: 'Apps scanned', value: String(data.summary.apps), hint: data.scope.orgs.join(', ') },
+    { label: 'Apps scanned', value: String(data.summary.apps), hint: scopeLabel(data.scope) },
     {
       label: 'Critical and high findings',
       value: String(s.critical + s.high),

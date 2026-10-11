@@ -122,7 +122,7 @@ export class CfClient {
       this.tokens.invalidate();
       res = await this.send(url, authenticated);
     }
-    if (res.status === 401) {
+    if (res.status === 401 && authenticated) {
       throw new CfAuthError(
         'The CF API rejected the access token (401). Log in again with `cf login` and retry.',
       );

@@ -1,0 +1,4 @@
+# Fingerprints of findings that are known fakes in commits already pushed.
+# Format: <commit>:<file>:<rule>:<line> (as printed by gitleaks).
+# A fake refresh token in a redaction unit test; replaced by a POISON-marked value in the next commit.
+9d5199d1ac1b6825a67157879391dcef5248dcab:packages/cli/test/unit/redact.test.ts:generic-api-key:30

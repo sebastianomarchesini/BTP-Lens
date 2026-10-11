@@ -6,8 +6,8 @@ body:
     attributes:
       value: |
         Thanks for the report. **Before you paste anything:** never include tokens, your `~/.cf/config.json`,
-        service keys or environment variable *values*. Org, space and app names are fine, or run
-        `btp-lens report --redact` and share that output instead.
+        service keys or environment variable *values*. Org, space and app names are fine; replace them with
+        placeholders if your company would rather not see them in public.
   - type: input
     id: version
     attributes:
@@ -22,9 +22,9 @@ body:
       label: How did you run it?
       options:
         - npx btp-lens (guided mode, no flags)
-        - btp-lens scan with flags
-        - Downloaded executable (Windows/macOS)
-        - GitHub Action
+        - btp-lens scan or report with flags
+        - From a clone of the repository
+        - Other (say which below)
     validations:
       required: true
   - type: textarea

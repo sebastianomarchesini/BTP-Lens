@@ -58,7 +58,7 @@ describe('btp-lens CLI', () => {
     expect(c.out()).toContain(
       'Scanned 8 app(s) in acme-prod: 3 finding(s) (0 critical, 0 high, 1 medium, 2 low, 0 info)',
     );
-    expect(c.err()).toContain('Authenticated with the BTP_LENS_ACCESS_TOKEN');
+    expect(c.err()).toContain('Credentials: BTP_LENS_ACCESS_TOKEN');
     // SEC-22: the sharing warning is printed once per scan.
     expect(c.out().match(/do not commit them/g)).toHaveLength(1);
   });

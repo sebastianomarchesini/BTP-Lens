@@ -1,6 +1,25 @@
 # Changelog
 
-## Unreleased (v0.1 in development)
+## 0.1.0 (2026-10-10)
+
+First public release. It covers guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule and every report format. The other rules in [docs/rules.md](docs/rules.md) (runtime and stack end of life, buildpack age, idle apps, SAPUI5 maintenance, `@sap/*` packages, known CVEs and plain-text secrets) and the `sbom` command arrive in the next releases.
+
+### Fixed (pre-release audit, 2026-10-11)
+
+- **HTML report:** grouping the Apps table by org or space no longer blanks the whole report; a page that fails now shows a message and the other sections keep working. The theme menu (Light, Dark, Same as system) is now visible and usable; it rendered with no size before. A scan limited with `--space` now says so in the headline, the title bar and the summary.
+- **Guided mode:** org names and error texts from the CF API now pass through the same escape-sequence and token filter as the rest of the CLI. Ctrl+C now stops the wizard while it is connecting, signing in or scanning, as the banner promises. The login URL from the CF root is validated as plain https before it is shown or opened. "The report was opened in your browser" is only printed when the opener succeeded.
+- **Windows:** files and URLs are opened through PowerShell with a literal argument instead of `cmd /c start`, so `&`, `%` and `|` in a path or URL cannot run anything.
+- **Connection errors:** the real cause behind Node's `fetch failed` (DNS, refused connection, TLS interception, proxy 407) is kept, so `doctor` and guided mode now give the right advice; TLS interception was previously reported as a proxy problem. The proxy advice (`NODE_USE_ENV_PROXY=1`) is only given on Node.js 22.21 or 24 and newer, where it exists; older versions are told to upgrade.
+- **Scan:** a user who can see the org but none of its spaces now gets a clear message and exit code 2 instead of an empty report with every check "ran" (the CF list endpoints filter by visibility instead of answering 403). `--org` and `--space` are matched exactly; a comma in a name no longer widens the filter. A `401` on the unauthenticated root call is no longer reported as a rejected token.
+- **Output files:** reports are never written through a symbolic link, an existing report file is tightened to `0600`, and file-system errors are explained in plain words.
+- **Terminal filter:** `Basic` credentials and the cf CLI config field names (`AccessToken`, `RefreshToken`, `UAAOAuthClientSecret`) are redacted too.
+- `--no-probe-routes` is hidden from `--help` and the snapshot records `probeRoutes: false`, because no route probe exists yet. `--fail-on` no longer prints its default twice. `btp-lens guided` in a script (no terminal) prints the usage hint and exits 2 instead of writing escape codes to the pipe.
+- **CSV:** the files start with a UTF-8 byte-order mark, so Excel opens non-ASCII org, space and app names correctly, and control characters are dropped from cells.
+- **Report accessibility:** the document title names the section (`Apps · BTP Lens report`), every section has a page heading, and focus moves to the page on navigation so screen readers announce it.
+- **Licenses:** the report and `THIRD_PARTY_LICENSES.md` now carry the Unicode CLDR notice (locale data) and the Preact MIT notice (vendored by UI5 Web Components).
+- **Docs:** README, privacy, FAQ, permissions, data sources, security policy and the landing page describe what 0.1.0 does rather than what is planned; the CLA text now exists (`docs/CLA.md`); links to GitHub Discussions were replaced by issues.
+- **Release workflow:** runs the same gates as CI (coverage, sample report, offline Playwright check); CI also runs on version tags; the README shipped to npm has its links pinned to the release tag.
+- `btp-lens doctor` no longer tells you to run `btp-lens doctor` when the API check fails. A `401`, `403` or `407` from the API root is now explained as a proxy or firewall block, with the fix.
 
 ### Added
 

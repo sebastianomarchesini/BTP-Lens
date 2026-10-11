@@ -1,7 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ConfigError } from './http/errors.js';
-import { ensurePrivateDir, writePrivateFile } from './io/files.js';
+import { describeFsError, ensurePrivateDir, writePrivateFile } from './io/files.js';
 import { SNAPSHOT_SCHEMA_VERSION, type Snapshot, SnapshotSchema } from './model/snapshot.js';
 
 /** snapshot-20260929T031500Z.json: sortable, one file per scan. */
@@ -29,8 +29,11 @@ export async function readSnapshot(path: string): Promise<Snapshot> {
     }
     json = JSON.parse(await readFile(path, 'utf8'));
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    throw new ConfigError(`Could not read snapshot ${path}: ${reason}`);
+    const reason =
+      error instanceof SyntaxError
+        ? `the file is not valid JSON (${error.message})`
+        : describeFsError(error);
+    throw new ConfigError(`Could not read snapshot ${path}: ${reason}.`);
   }
   const version = (json as { schemaVersion?: unknown } | null)?.schemaVersion;
   if (version !== SNAPSHOT_SCHEMA_VERSION) {

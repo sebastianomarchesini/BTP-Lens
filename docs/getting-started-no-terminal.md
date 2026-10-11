@@ -78,17 +78,19 @@ Type `npx btp-lens` again. Each run creates a new folder under `Documents\btp-le
 
 ## When something goes wrong
 
-Type `npx btp-lens doctor` and press Enter. It checks the five things that usually break and tells you what to do about each one, in one sentence:
+Type `npx btp-lens doctor` and press Enter. It checks the four things that usually break (Node.js, the connection to your landscape, an existing cf CLI login, the output folder) and tells you what to do about each one, in one sentence:
 
 | It says | What to do |
 | --- | --- |
 | `FAIL Node.js` | Install the LTS version from nodejs.org, then open a new terminal window. |
-| `FAIL Cloud Foundry API: … could not be reached` | You are probably behind a company proxy. Ask IT for the proxy address, then set `HTTPS_PROXY` and `NODE_USE_ENV_PROXY=1` as the message says. |
+| `FAIL Cloud Foundry API: … could not be reached` | You are probably behind a company proxy. Ask IT for the proxy address, then set `HTTPS_PROXY` and `NODE_USE_ENV_PROXY=1` as the message says (this needs Node.js 24, or 22.21 or newer; the message tells you if yours is older). |
 | `FAIL Cloud Foundry API: … is not trusted` | Your company inspects HTTPS traffic. Ask IT for the company root certificate file and set `NODE_EXTRA_CA_CERTS` to its path. BTP Lens never skips certificate checks. |
+| `FAIL Cloud Foundry API: … refused the request before sign-in` | A company proxy or firewall blocks the address. Ask IT to allow it, or set the proxy as above. |
 | `FAIL Output folder` | Move to a folder you own (`cd Documents`) and try again. |
-| "Your user has no role in any Cloud Foundry org" | Ask your administrator for Space Auditor: [text to send](permissions.md#asking-for-the-role). |
 
-Still stuck? Open a [question in Discussions](https://github.com/sebastianomarchesini/BTP-Lens/discussions). Never paste tokens, passwords or your `.cf/config.json` file.
+Two messages come from BTP Lens itself rather than from `doctor`, and both mean the same thing: ask your administrator for Space Auditor with [this text](permissions.md#asking-for-the-role). They are "Your user has no role in any Cloud Foundry org" and "You can see the org … but none of its spaces".
+
+Still stuck? [Open a question](https://github.com/sebastianomarchesini/BTP-Lens/issues/new?labels=question&title=Question%3A%20) on GitHub. Never paste tokens, passwords or your `.cf/config.json` file.
 
 ## What BTP Lens does not do
 
