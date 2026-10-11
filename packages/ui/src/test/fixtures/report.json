@@ -13,7 +13,7 @@
   },
   "options": {
     "deep": false,
-    "probeRoutes": true
+    "probeRoutes": false
   },
   "checks": [
     {

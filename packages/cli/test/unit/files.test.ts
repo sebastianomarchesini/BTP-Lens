@@ -1,4 +1,4 @@
-import { mkdtemp, stat, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -15,6 +15,34 @@ describe('private output files', () => {
     await writePrivateFile(join(dir, 'report.json'), '{}');
     expect((await stat(dir)).mode & 0o777).toBe(0o700);
     expect((await stat(join(dir, 'report.json'))).mode & 0o777).toBe(0o600);
+  });
+});
+
+describe('private output files: symlinks and existing files', () => {
+  it.skipIf(!posix)(
+    'refuses to write through a symlink and tightens an existing file',
+    async () => {
+      const base = await mkdtemp(join(tmpdir(), 'btp-lens-files-'));
+      const target = join(base, 'target.json');
+      await writeFile(target, 'keep', { mode: 0o644 });
+      const link = join(base, 'report.json');
+      await symlink(target, link);
+      await expect(writePrivateFile(link, '{}')).rejects.toThrow(/symbolic link/);
+      expect(await readFile(target, 'utf8')).toBe('keep');
+      await writePrivateFile(target, '{}');
+      expect((await stat(target)).mode & 0o777).toBe(0o600);
+    },
+  );
+
+  it('explains missing files and bad JSON in plain words', async () => {
+    await expect(readSnapshot(join(tmpdir(), 'no-such-dir', 'snapshot.json'))).rejects.toThrow(
+      /does not exist/,
+    );
+    const base = await mkdtemp(join(tmpdir(), 'btp-lens-json-'));
+    const path = join(base, 'bad.json');
+    await writeFile(path, '{not json');
+    await expect(readSnapshot(path)).rejects.toThrow(/not valid JSON/);
+    await expect(ensurePrivateDir(join(path, 'nested'))).rejects.toThrow(/not a folder/);
   });
 });
 

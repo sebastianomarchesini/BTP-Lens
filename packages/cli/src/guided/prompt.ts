@@ -1,5 +1,6 @@
 import { createInterface, type Interface } from 'node:readline';
 import { Writable } from 'node:stream';
+import { sanitizeOutput } from '../io/redact.js';
 
 /** Thrown when the user presses Ctrl+C or closes the input. Exit code 0, nothing written. */
 export class WizardCancelled extends Error {
@@ -73,7 +74,19 @@ class MutableOutput extends Writable {
   }
 }
 
-/** Interactive prompts on a TTY. */
+export interface TerminalPrompterOptions {
+  /**
+   * Called when Ctrl+C arrives while no question is pending, i.e. during
+   * network work or the scan itself. Readline swallows the key otherwise.
+   */
+  onInterrupt?: () => void;
+}
+
+/**
+ * Interactive prompts on a TTY. Everything written passes through the same
+ * escape-sequence and token filter as the rest of the CLI (SEC-04, SEC-17):
+ * org names and error titles come from the CF API.
+ */
 export class TerminalPrompter extends BasePrompter {
   private readonly output: MutableOutput;
   private readonly rl: Interface;
@@ -83,32 +96,35 @@ export class TerminalPrompter extends BasePrompter {
   constructor(
     input: NodeJS.ReadableStream = process.stdin,
     private readonly out: NodeJS.WritableStream = process.stdout,
+    options: TerminalPrompterOptions = {},
   ) {
     super();
     this.output = new MutableOutput(out);
     this.rl = createInterface({ input, output: this.output, terminal: true });
-    const cancel = () => {
+    const cancel = (interrupted: boolean) => () => {
       this.closed = true;
-      this.pendingReject?.(new WizardCancelled());
+      if (this.pendingReject) this.pendingReject(new WizardCancelled());
+      else if (interrupted) options.onInterrupt?.();
     };
-    this.rl.on('SIGINT', cancel);
-    this.rl.on('close', cancel);
+    this.rl.on('SIGINT', cancel(true));
+    this.rl.on('close', cancel(false));
   }
 
   say(text: string): void {
-    this.out.write(`${text}\n`);
+    this.out.write(`${sanitizeOutput(text)}\n`);
   }
 
   ask(question: string, options: AskOptions = {}): Promise<string> {
     if (this.closed) return Promise.reject(new WizardCancelled());
     const suffix = options.default && !options.hidden ? ` [${options.default}]` : '';
+    const prompt = sanitizeOutput(question);
     return new Promise<string>((resolve, reject) => {
       this.pendingReject = reject;
       if (options.hidden) {
-        this.out.write(`${question}: `);
+        this.out.write(`${prompt}: `);
         this.output.muted = true;
       }
-      this.rl.question(options.hidden ? '' : `${question}${suffix}: `, (answer) => {
+      this.rl.question(options.hidden ? '' : `${prompt}${suffix}: `, (answer) => {
         this.pendingReject = undefined;
         if (options.hidden) {
           this.output.muted = false;

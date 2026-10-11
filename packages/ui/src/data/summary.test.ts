@@ -1,7 +1,7 @@
 import type { ReportData } from '@btp-lens/model';
 import { describe, expect, it } from 'vitest';
 import sample from '../test/fixtures/report.json';
-import { startHereSentences } from './summary';
+import { scopeLabel, scopePhrase, startHereSentences } from './summary';
 
 const data = sample as unknown as ReportData;
 
@@ -25,6 +25,16 @@ describe('startHereSentences', () => {
       '2 checks could not run with your role, so some things were not looked at. That is not a problem with your apps.',
       'Nothing in your account was changed: this scan only read information.',
     ]);
+  });
+
+  it('names the space when the scan was limited to one', () => {
+    const scope = { ...data.scope, spaces: ['prod'] };
+    expect(startHereSentences({ ...data, scope })[0]).toBe(
+      '8 apps in space prod of acme-prod were scanned on Sep 29, 2026.',
+    );
+    expect(scopeLabel(scope)).toBe('acme-prod / prod');
+    expect(scopePhrase({ ...scope, spaces: ['dev', 'qa'] })).toBe('spaces dev, qa of acme-prod');
+    expect(scopeLabel(data.scope)).toBe('acme-prod');
   });
 
   it('falls back to the rule title for rules without a phrase', () => {

@@ -96,6 +96,36 @@ describe('btp-lens doctor', () => {
     expect(text).not.toMatch(/Run `btp-lens doctor`/);
   });
 
+  it('recognises TLS interception hidden behind "fetch failed" and fits proxy advice to Node', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'btp-lens-doctor-'));
+    const failWith = (message: string, code: string) =>
+      new FakeFetch().on('GET', 'api.cf.example.org/', () => {
+        throw new TypeError('fetch failed', { cause: Object.assign(new Error(message), { code }) });
+      });
+    const run = (fake: FakeFetch, nodeVersion: string) =>
+      runDoctor({
+        api,
+        env: { CF_HOME: home },
+        cwd: home,
+        fetch: fake.fetch,
+        nodeVersion,
+        now: () => NOW,
+      });
+
+    const tls = formatDoctor(
+      await run(failWith('self-signed certificate', 'DEPTH_ZERO_SELF_SIGNED_CERT'), '24.9.0'),
+    );
+    expect(tls).toContain('is not trusted');
+    expect(tls).toContain('NODE_EXTRA_CA_CERTS');
+    expect(tls).not.toContain('HTTPS_PROXY');
+
+    const oldNode = formatDoctor(
+      await run(failWith('connect ECONNREFUSED 10.0.0.1:443', 'ECONNREFUSED'), '22.12.0'),
+    );
+    expect(oldNode).toContain('could not be reached');
+    expect(oldNode).toContain('upgrade Node.js to 24');
+  });
+
   it('treats a missing cf CLI login as fine, because guided mode signs in itself', async () => {
     const home = await mkdtemp(join(tmpdir(), 'btp-lens-doctor-'));
     const checks = await runDoctor({ env: { CF_HOME: home }, cwd: home, nodeVersion: '24.0.0' });

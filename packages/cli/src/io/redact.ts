@@ -14,11 +14,15 @@ const CONTROL_CHARACTERS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\x80-\x9f]/g;
 
 /** Three base64url segments starting with the JSON header `{"` — a JWT. */
 const JWT = /eyJ[\w-]{8,}\.[\w-]{8,}\.[\w-]*/g;
-/** `bearer <token>` however it got there. */
-const BEARER = /\b(bearer)\s+[\w.~+/=-]{8,}/gi;
-/** Form fields and JSON members of the OAuth token exchange. */
+/** `bearer <token>` or `basic <base64>` however it got there. */
+const BEARER = /\b(bearer|basic)\s+[\w.~+/=-]{8,}/gi;
+/**
+ * Form fields and JSON members of the OAuth token exchange, plus the field
+ * names the cf CLI uses in ~/.cf/config.json (AccessToken, RefreshToken,
+ * UAAOAuthClientSecret).
+ */
 const OAUTH_FIELDS =
-  /\b(refresh_token|access_token|client_secret|password|passcode)(["']?\s*[:=]\s*["']?)[^\s"'&,}]+/gi;
+  /\b(refresh_?token|access_?token|client_?secret|uaaoauthclientsecret|password|passcode)(["']?\s*[:=]\s*["']?)[^\s"'&,}]+/gi;
 
 export function stripControlCharacters(text: string): string {
   return text.replace(ANSI_SEQUENCES, '').replace(CONTROL_CHARACTERS, '');

@@ -103,6 +103,37 @@ test('follows the OS color scheme with the Horizon themes', async ({ page, conte
   expect(external).toEqual([]);
 });
 
+test('grouping the apps table never blanks the report', async ({ page, context }) => {
+  const { errors } = await isolate(context, page);
+  await page.goto(`${REPORT}#/apps`);
+  await expect(page.getByRole('gridcell', { name: 'legacy-reporting', exact: true })).toBeVisible();
+  // Group headers carry the group value and its row count; 'none' shows the rows again.
+  const expected = { org: 'acme-prod (8)', space: 'prod (4)', none: 'legacy-reporting' };
+  for (const [group, text] of Object.entries(expected)) {
+    await page.locator(`ui5-segmented-button-item[data-group="${group}"]`).click();
+    await page.waitForTimeout(300);
+    await expect(page.getByRole('main')).toContainText(text);
+    await expect(page.getByRole('tab', { name: 'Apps' })).toBeVisible();
+  }
+  expect(errors, 'console and page errors').toEqual([]);
+});
+
+test('the theme menu switches between light and dark by hand', async ({ page, context }) => {
+  await isolate(context, page);
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.goto(REPORT);
+  await expect(page.getByText('Top risky apps')).toBeVisible();
+  const light = await background(page);
+
+  await page.getByRole('button', { name: 'Theme' }).click();
+  await page.locator('ui5-menu-item[data-mode="dark"]').click();
+  await expect.poll(() => background(page)).not.toBe(light);
+
+  await page.getByRole('button', { name: 'Theme' }).click();
+  await page.locator('ui5-menu-item[data-mode="light"]').click();
+  await expect.poll(() => background(page)).toBe(light);
+});
+
 test('is usable at phone width without horizontal page scrolling', async ({ page, context }) => {
   await isolate(context, page);
   await page.setViewportSize({ width: 375, height: 812 });

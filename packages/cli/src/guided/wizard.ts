@@ -50,14 +50,41 @@ export function reportDirName(now: Date): string {
  * One sentence on what went wrong, one on what to do. No stack traces.
  * `doctor` passes `suggestDoctor: false`, so it never tells people to run itself.
  */
+/**
+ * Proxy advice that fits the running Node.js. NODE_USE_ENV_PROXY exists from
+ * Node.js 22.21 and 24.0 (nodejs.org/api/cli.html); older versions ignore it.
+ */
+export function proxyAdvice(nodeVersion: string = process.versions.node): string {
+  const [major = 0, minor = 0] = nodeVersion.split('.').map(Number);
+  const supported = major >= 24 || (major === 22 && minor >= 21);
+  const setting =
+    'set HTTPS_PROXY=http://proxy.company:8080 and NODE_USE_ENV_PROXY=1 (ask IT for the address)';
+  return supported
+    ? setting
+    : `upgrade Node.js to 24 LTS (your Node.js ${nodeVersion} cannot use a proxy), then ${setting}`;
+}
+
+export interface ExplainOptions {
+  /** `doctor` passes false, so it never tells people to run itself. */
+  suggestDoctor?: boolean;
+  nodeVersion?: string;
+}
+
+/**
+ * One sentence on what went wrong, one on what to do. No stack traces.
+ * Matches on the Node error codes that HttpNetworkError carries
+ * (DEPTH_ZERO_SELF_SIGNED_CERT, ENOTFOUND, ECONNREFUSED, ...) as well as on
+ * message text.
+ */
 export function explainConnectionError(
   error: unknown,
   apiUrl: URL,
-  { suggestDoctor = true }: { suggestDoctor?: boolean } = {},
+  { suggestDoctor = true, nodeVersion }: ExplainOptions = {},
 ): string {
   const text = error instanceof Error ? error.message : String(error);
   const lower = text.toLowerCase();
-  if (/certificate|cert_|self.signed|unable to verify/.test(lower)) {
+  const proxy = proxyAdvice(nodeVersion);
+  if (/certificate|cert_|self.signed|unable[ _]to[ _]verify|err_tls|altname|ossl/.test(lower)) {
     return (
       `The connection to ${apiUrl.host} is not trusted, which usually means your company inspects HTTPS traffic.\n` +
       'Ask IT for the company root certificate and set NODE_EXTRA_CA_CERTS to its path. BTP Lens never skips certificate checks.'
@@ -66,19 +93,23 @@ export function explainConnectionError(
   if (/enotfound|eai_again|getaddrinfo/.test(lower)) {
     return (
       `The address ${apiUrl.host} could not be found.\n` +
-      'Check the API endpoint in the BTP cockpit (Subaccount → Overview → Cloud Foundry Environment), or set your company proxy: HTTPS_PROXY=http://proxy.company:8080 and NODE_USE_ENV_PROXY=1.'
+      `Check the API endpoint in the BTP cockpit (Subaccount → Overview → Cloud Foundry Environment), or ${proxy}.`
     );
   }
-  if (/econnrefused|etimedout|fetch failed|network error|socket/.test(lower)) {
-    return (
-      `${apiUrl.host} could not be reached.\n` +
-      'If you are on a company network, set HTTPS_PROXY=http://proxy.company:8080 and NODE_USE_ENV_PROXY=1 (ask IT for the address), then try again.'
-    );
-  }
-  if (/\b(401|403|407)\b/.test(lower)) {
+  if (/\b(401|403|407)\b|proxy (authentication|response)/.test(lower)) {
     return (
       `${apiUrl.host} refused the request before sign-in (${text}).\n` +
-      'A company proxy or firewall is probably blocking it: ask IT to allow this address, or set HTTPS_PROXY=http://proxy.company:8080 and NODE_USE_ENV_PROXY=1.'
+      `A company proxy or firewall is probably blocking it: ask IT to allow this address, or ${proxy}.`
+    );
+  }
+  if (
+    /econnrefused|etimedout|econnreset|ehostunreach|enetunreach|timed out|abort|fetch failed|network error|socket/.test(
+      lower,
+    )
+  ) {
+    return (
+      `${apiUrl.host} could not be reached.\n` +
+      `If you are on a company network, ${proxy}, then try again.`
     );
   }
   if (!suggestDoctor) {
@@ -164,6 +195,25 @@ async function existingCfSession(
   }
 }
 
+/**
+ * The login server from the CF root, only when it is a plain https URL. It is
+ * shown to the user and handed to the OS browser opener, so anything else
+ * (another scheme, embedded credentials) is treated as "no login endpoint".
+ */
+export function loginBaseOf(root: CfRoot): string | undefined {
+  const href = root.links.login?.href ?? root.links.uaa?.href;
+  if (!href) return undefined;
+  try {
+    const url = new URL(href);
+    if (url.protocol !== 'https:' || url.username || url.password) return undefined;
+    url.search = '';
+    url.hash = '';
+    return url.href.replace(/\/+$/, '');
+  } catch {
+    return undefined;
+  }
+}
+
 async function verify(tokens: TokenProvider): Promise<string | undefined> {
   try {
     await tokens.getToken();
@@ -182,7 +232,7 @@ async function stepSignIn(o: WizardOptions, s: Session): Promise<TokenProvider> 
     return new StaticTokenProvider(o.env.BTP_LENS_ACCESS_TOKEN);
   }
   const existing = await existingCfSession(s, o.env);
-  const loginBase = s.root.links.login?.href ?? s.root.links.uaa?.href;
+  const loginBase = loginBaseOf(s.root);
   const choices: { label: string; kind: 'existing' | 'passcode' | 'password' }[] = [];
   if (existing)
     choices.push({
@@ -228,7 +278,7 @@ async function stepSignIn(o: WizardOptions, s: Session): Promise<TokenProvider> 
         passwordGrant(username, password),
       );
     } else {
-      const passcodeUrl = `${loginBase.replace(/\/+$/, '')}/passcode`;
+      const passcodeUrl = `${loginBase}/passcode`;
       p.say(`Sign in in your browser, then copy the one-time code shown there: ${passcodeUrl}`);
       if (o.open) await o.open(passcodeUrl);
       const code = await p.ask('One-time code', { hidden: true });

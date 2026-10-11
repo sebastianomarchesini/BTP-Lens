@@ -40,6 +40,7 @@ Reading environment variables needs **Space Developer** or **Space Supporter**. 
 
 ## When a role is missing
 
+- The v3 **list** endpoints BTP Lens uses (`/v3/spaces`, `/v3/apps`, `/v3/droplets`) do not answer 403 to a user without a space role: they return only what the user may see, which can be nothing. BTP Lens therefore stops with exit code 2 and the text to send to your administrator when the org is visible but none of its spaces is. The number of visible spaces is printed while the scan runs and the spaces are listed in the snapshot (`raw.spaces`).
 - A call that returns **403** records the check as `skipped` with reason `insufficient role: needs <roles>`, and the scan continues.
 - Rules that depend on a skipped collector are skipped too.
 - Skipped checks appear in every report: on the HTML overview, in the JSON `checks`, and as SARIF notifications. Missing data is therefore never mistaken for "no findings".

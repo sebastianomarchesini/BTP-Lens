@@ -7,8 +7,10 @@ name: Release
 # npm authentication, in order of preference:
 #   1. Trusted publishing (no token): on npmjs.com open the btp-lens package →
 #      Settings → Trusted publisher → GitHub Actions, and enter
-#      owner `sebastianomarchesini`, repository `BTP-Lens`, workflow `release.yml`.
-#   2. Fallback: an npm automation token stored as the repository secret NPM_TOKEN.
+#      owner `sebastianomarchesini`, repository `BTP-Lens`, workflow `release.yml`
+#      and environment `npm`.
+#   2. Fallback: a granular access token with publish permission for btp-lens
+#      (bypass 2FA) stored as the repository secret NPM_TOKEN.
 
 on:
   push:
@@ -31,10 +33,9 @@ jobs:
       id-token: write # npm trusted publishing and provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
-          cache: npm
           registry-url: https://registry.npmjs.org
 
       - name: Tag must match the package version
@@ -53,6 +54,15 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+      # The same gates as ci.yml: a tag can be pushed on a commit CI never saw.
+      - name: Coverage (analyzers must stay above 85% lines)
+        run: npm run coverage -w btp-lens
+      - name: Generate sample report from fixtures
+        run: npm run sample
+      - name: Offline report check (network disabled)
+        run: |
+          npx playwright install --with-deps chromium
+          npm run e2e
 
       - name: Only dist, README, LICENSE and NOTICE ship
         run: |
@@ -69,8 +79,12 @@ jobs:
           '
           rm pack.json
 
-      # Trusted publishing needs npm 11.5.1 or later.
-      - run: npm install -g npm@11
+      # Trusted publishing needs npm 11.5.1 or later; Node 24 bundles a recent 11.x.
+      - name: Ensure npm 11.5.1 or later
+        run: |
+          node -e 'const [a,b,c]=process.argv[1].split(".").map(Number); process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)' "$(npm --version)" \
+            || npm install -g npm@11.6.1
+          npm --version
       - name: Publish to npm
         run: npm publish -w btp-lens --access public --provenance
         env:

@@ -23,6 +23,18 @@ describe('stripControlCharacters', () => {
 });
 
 describe('redactSecrets', () => {
+  it('redacts Basic credentials and the cf CLI config field names', () => {
+    expect(redactSecrets('Authorization: Basic dXNlcjpwYXNzd29yZA==')).toBe(
+      'Authorization: Basic [redacted]',
+    );
+    expect(redactSecrets('"RefreshToken":"r-1234567890","Target":"https://api"')).toBe(
+      '"RefreshToken":"[redacted]","Target":"https://api"',
+    );
+    expect(redactSecrets('UAAOAuthClientSecret=s3cret-value')).toBe(
+      'UAAOAuthClientSecret=[redacted]',
+    );
+  });
+
   it('redacts JWTs and bearer tokens wherever they appear', () => {
     expect(redactSecrets(`token ${jwt} rejected`)).toBe('token [redacted-token] rejected');
     expect(redactSecrets('Authorization: bearer abcdefghijklmnop')).toBe(

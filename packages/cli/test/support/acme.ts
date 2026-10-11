@@ -35,6 +35,12 @@ function fixture(name: string): unknown {
 export interface AcmeOptions {
   /** Simulate a user who may not read droplets (403). */
   dropletsForbidden?: boolean;
+  /** Simulate a user with an org role but no space role: lists come back empty, never 403. */
+  noVisibleSpaces?: boolean;
+}
+
+function emptyPage(name: string): unknown {
+  return { ...(fixture(name) as object), resources: [] };
 }
 
 export function acmeFetch(options: AcmeOptions = {}): FakeFetch {
@@ -46,7 +52,10 @@ export function acmeFetch(options: AcmeOptions = {}): FakeFetch {
       jsonResponse(fixture('organizations')),
     )
     .on('GET', `${host}/v3/spaces?organization_guids=${org}&per_page=5000`, () =>
-      jsonResponse(fixture('spaces')),
+      jsonResponse(options.noVisibleSpaces ? emptyPage('spaces') : fixture('spaces')),
+    )
+    .on('GET', `${host}/v3/organizations?names=acme-prod%2Cother&per_page=5000`, () =>
+      jsonResponse(fixture('organizations')),
     )
     .on('GET', `${host}/v3/apps?organization_guids=${org}&per_page=5000`, () =>
       jsonResponse(fixture('apps-page1')),

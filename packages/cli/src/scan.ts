@@ -4,6 +4,7 @@ import { collectApps, type Scope } from './collectors/apps.js';
 import { collectCurrentDroplets } from './collectors/droplets.js';
 import { listSpaces, resolveOrg } from './collectors/orgs.js';
 import { type TokenProvider, resolveTokenProvider } from './http/auth.js';
+import { ConfigError } from './http/errors.js';
 import { CfClient, type CfRoot } from './http/cfClient.js';
 import { type FetchLike, HttpClient } from './http/httpClient.js';
 import { EgressPolicy, cfApiRule, logCacheRule, uaaRule } from './net/allowlist.js';
@@ -73,10 +74,18 @@ export async function scan(options: ScanOptions): Promise<Snapshot> {
     options.tokens ??
     (await resolveTokenProvider({ env: options.env, http, apiUrl: options.apiUrl, tokenUrl }));
   cf.setTokenProvider(tokens);
-  log(`Authenticated with the ${tokens.source}`);
+  log(`Credentials: ${tokens.source}`);
 
   const org = await resolveOrg(cf, options.org);
   const spaces = await listSpaces(cf, org, options.space);
+  // The v3 list endpoints filter by visibility instead of answering 403, so a
+  // user without a space role would otherwise get an empty report that looks clean.
+  if (spaces.length === 0) {
+    throw new ConfigError(
+      `You can see the org "${org.name}" but none of its spaces, so there is nothing to scan.\n` +
+        'Ask your administrator for the Space Auditor role (read-only) on the spaces you want to scan; docs/permissions.md has the text to send.',
+    );
+  }
   const scope: Scope = {
     orgGuid: org.guid,
     ...(options.space === undefined ? {} : { spaceGuids: spaces.map((s) => s.guid) }),
@@ -114,7 +123,9 @@ export async function scan(options: ScanOptions): Promise<Snapshot> {
       orgs: [org.name],
       ...(options.space === undefined ? {} : { spaces: [options.space] }),
     },
-    options: { deep: options.deep, probeRoutes: options.probeRoutes },
+    // No collector probes app routes yet (planned with UI5_OUT_OF_MAINTENANCE), so the
+    // snapshot records what happened, whatever --no-probe-routes said.
+    options: { deep: options.deep, probeRoutes: false },
     checks: [...collectorChecks, ...analysis.ruleChecks],
     raw,
     apps: analysis.apps,

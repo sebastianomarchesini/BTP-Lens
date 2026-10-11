@@ -18,8 +18,9 @@ type GroupBy = 'none' | 'org' | 'space';
 
 /** Table rows are our own inventory items; the table types them loosely. */
 const asApp = (row: Record<string, unknown>) => row as unknown as AppInventoryItem;
-const cellApp = ({ cell }: AnalyticalTableCellInstance) =>
-  asApp(cell.row.original as Record<string, unknown>);
+/** Grouped (aggregate) rows have no original item, so renderers must cope with undefined. */
+const cellApp = ({ cell }: AnalyticalTableCellInstance): AppInventoryItem | undefined =>
+  cell.row.original ? asApp(cell.row.original as Record<string, unknown>) : undefined;
 
 const total = (row: Record<string, unknown>) =>
   Object.values(asApp(row).findingCounts).reduce((sum, n) => sum + n, 0);
@@ -32,11 +33,12 @@ const buildpacks = (row: Record<string, unknown>) => {
   );
 };
 
+const rank = (row: { original?: Record<string, unknown> }) =>
+  row.original ? severityRank(asApp(row.original).highestSeverity) : -1;
 const byRank = (
-  a: { original: Record<string, unknown> },
-  b: { original: Record<string, unknown> },
-) =>
-  severityRank(asApp(a.original).highestSeverity) - severityRank(asApp(b.original).highestSeverity);
+  a: { original?: Record<string, unknown> },
+  b: { original?: Record<string, unknown> },
+) => rank(a) - rank(b);
 
 export function Apps() {
   const data = useOutletContext<ReportData>();
@@ -50,9 +52,10 @@ export function Apps() {
         Header: 'Highest severity',
         id: 'severity',
         accessor: (row: Record<string, unknown>) => asApp(row).highestSeverity ?? 'none',
-        Cell: (props: AnalyticalTableCellInstance) => (
-          <SeverityStatus severity={cellApp(props).highestSeverity} />
-        ),
+        Cell: (props: AnalyticalTableCellInstance) => {
+          const app = cellApp(props);
+          return app ? <SeverityStatus severity={app.highestSeverity} /> : null;
+        },
         sortType: byRank,
         minWidth: 150,
       },
@@ -72,7 +75,10 @@ export function Apps() {
         Header: 'Last deploy',
         id: 'lastDeployAt',
         accessor: 'lastDeployAt',
-        Cell: (props: AnalyticalTableCellInstance) => formatDate(cellApp(props).lastDeployAt),
+        Cell: (props: AnalyticalTableCellInstance) => {
+          const app = cellApp(props);
+          return app ? formatDate(app.lastDeployAt) : '';
+        },
         width: 130,
         responsiveMinWidth: 800,
         responsivePopIn: true,

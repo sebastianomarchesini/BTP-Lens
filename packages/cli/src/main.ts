@@ -1,4 +1,4 @@
-import { Command, CommanderError } from 'commander';
+import { Command, CommanderError, Option } from 'commander';
 import { reanalyze } from './analyzers/index.js';
 import {
   type FailOn,
@@ -44,8 +44,7 @@ export interface CliIo {
 export const EXIT = { ok: 0, findings: 1, error: 2 } as const;
 
 const DEFAULT_FORMATS = 'html,json,csv,sarif';
-const FAIL_ON_HELP =
-  'exit 1 on a finding at or above: critical, high, medium, low, info (default: none)';
+const FAIL_ON_HELP = 'exit 1 on a finding at or above: critical, high, medium, low, info';
 
 function exitCodeFor(data: ReportData, failOn: FailOn): number {
   const threshold = failThreshold(failOn);
@@ -57,7 +56,7 @@ function printSummary(data: ReportData, files: string[], io: CliIo): void {
   const s = data.summary.findingsBySeverity;
   const skipped = data.summary.checksSkipped;
   io.stdout(
-    `Scanned ${data.summary.apps} app(s) in ${data.scope.orgs.join(', ')}: ` +
+    `Scanned ${data.summary.apps} app(s) in ${[data.scope.orgs.join(', '), ...(data.scope.spaces ?? [])].join(' / ')}: ` +
       `${data.summary.findings} finding(s) (${s.critical} critical, ${s.high} high, ` +
       `${s.medium} medium, ${s.low} low, ${s.info} info)` +
       `${skipped > 0 ? `, ${skipped} check(s) skipped` : ''}.\n`,
@@ -100,9 +99,23 @@ async function runReport(config: ReportConfig, io: CliIo): Promise<number> {
   return exitCodeFor(data, config.failOn);
 }
 
+/** Whether a person is at the keyboard (both streams are terminals). */
+function isInteractive(io: CliIo): boolean {
+  return io.isTTY ?? (process.stdin.isTTY === true && process.stdout.isTTY === true);
+}
+
 async function runGuided(io: CliIo, open: boolean): Promise<number> {
+  const prompter =
+    io.prompter ??
+    new TerminalPrompter(process.stdin, process.stdout, {
+      // Ctrl+C while connecting or scanning: stop now, as the banner promises.
+      onInterrupt: () => {
+        io.stdout('\nCancelled.\n');
+        process.exit(130);
+      },
+    });
   return runWizard({
-    prompter: io.prompter ?? new TerminalPrompter(),
+    prompter,
     env: io.env,
     cwd: io.cwd ?? process.cwd(),
     open: open ? (io.open === undefined ? openInBrowser : io.open) : null,
@@ -145,7 +158,8 @@ function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
     .requiredOption('--org <name>', 'org to scan')
     .option('--space <name>', 'scan only this space')
     .option('--deep', 'also run checks that need SpaceDeveloper or SpaceSupporter', false)
-    .option('--no-probe-routes', 'do not read resources/sap-ui-version.json from app routes')
+    // Reserved for the UI5 rule; nothing probes app routes in 0.1.x, so it stays out of --help.
+    .addOption(new Option('--no-probe-routes', 'reserved, no effect yet').hideHelp())
     .option('--out <dir>', 'output directory', './reports')
     .option('--format <list>', 'report formats: html,json,csv,sarif', DEFAULT_FORMATS)
     .option('--fail-on <severity>', FAIL_ON_HELP, 'none')
@@ -171,6 +185,11 @@ function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
     .description('answer four questions and get a report (what `btp-lens` with no arguments does)')
     .option('--no-open', 'do not open the report in the browser')
     .action(async (options: { open: boolean }) => {
+      if (!io.prompter && !isInteractive(io)) {
+        io.stderr(GUIDED_HINT);
+        setExit(EXIT.error);
+        return;
+      }
       setExit(await runGuided(io, options.open));
     });
 
@@ -207,9 +226,7 @@ export async function main(argv: string[], rawIo: CliIo): Promise<number> {
   });
   try {
     if (argv.length === 0) {
-      const interactive =
-        io.isTTY ?? (process.stdin.isTTY === true && process.stdout.isTTY === true);
-      if (interactive) return await runGuided(io, true);
+      if (isInteractive(io)) return await runGuided(io, true);
       io.stderr(GUIDED_HINT);
       program.outputHelp({ error: true });
       return EXIT.error;
