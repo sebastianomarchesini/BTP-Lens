@@ -4,7 +4,12 @@ Merge this over the current README once v0.1.0 exists. Placeholders in `<…>`. 
 
 ---
 
-<p align="center"><img src="docs/assets/logo.svg" width="96" alt="BTP Lens logo"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.png">
+    <img src="docs/assets/logo.png" width="420" alt="BTP Lens">
+  </picture>
+</p>
 
 # BTP Lens
 

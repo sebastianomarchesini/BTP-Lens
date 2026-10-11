@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **New logo and app icon:** a cloud-and-magnifier mark. It is the report's ShellBar logo and favicon (inlined, so the report stays one offline file), and the README, landing page and social card use it. Light and dark variants of the horizontal logo live in `docs/assets/`.
+
 ## 0.1.0 (2026-10-10)
 
 First public release. It covers guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule and every report format. The other rules in [docs/rules.md](docs/rules.md) (runtime and stack end of life, buildpack age, idle apps, SAPUI5 maintenance, `@sap/*` packages, known CVEs and plain-text secrets) and the `sbom` command arrive in the next releases.

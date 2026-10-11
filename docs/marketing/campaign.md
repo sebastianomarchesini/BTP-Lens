@@ -74,7 +74,7 @@ The word "open source" appears in the first sentence of every launch post, and t
 
 ### Naming and trademark risk
 
-"SAP" never appears in the package, CLI or logo (`CLAUDE.md` constraint 6), and the README carries the non-affiliation notice. "BTP" on its own is descriptive of the platform, and we use it descriptively, but a trademark objection is not impossible. Mitigation: keep the notice everywhere, avoid SAP's blue and its logo shapes in ours, reserve a fallback package name (`cf-lens` or `landscape-lens`) at the same time as `btp-lens`, and decide in advance that we rename rather than argue.
+"SAP" never appears in the package, CLI or logo (`CLAUDE.md` constraint 6), and the README carries the non-affiliation notice. "BTP" on its own is descriptive of the platform, and we use it descriptively, but a trademark objection is not impossible. Mitigation: keep the notice everywhere, never use SAP's logo shapes or wordmark (the mark is a cloud and a magnifier in a blue-to-teal gradient; its blues sit near SAP's palette, so the non-affiliation notice stays next to it wherever it appears), reserve a fallback package name (`cf-lens` or `landscape-lens`) at the same time as `btp-lens`, and decide in advance that we rename rather than argue.
 
 ---
 
@@ -173,8 +173,8 @@ One piece per week, alternating channels, always with a redacted real screenshot
 
 | Asset | Spec | Owner / cost |
 |---|---|---|
-| Logo | A lens/aperture mark, no SAP blue (#0070F2) or SAP logo shapes; SVG plus 512 px PNG; works in Horizon light and dark | **Draft done:** `docs/assets/logo.svg` (from the UI); a designer pass is optional |
-| Social card | 1280×640, logo, one line, "read-only · offline · open source" | **Draft done:** `docs/assets/social-card.svg`; export to PNG for LinkedIn and X, which do not accept SVG |
+| Logo | Our own mark, no SAP logo shapes or SAP wordmark; 512 px PNG; works in Horizon light and dark | **Done:** cloud-and-magnifier mark. App icon `docs/assets/icon.png` (512 px, also the report ShellBar logo and favicon), horizontal logo `docs/assets/logo.png` with a dark-background variant `docs/assets/logo-dark.png`. A vector (SVG) master is still to do |
+| Social card | 1280×640, logo, one line, "read-only · offline · open source" | **Done:** `docs/assets/social-card.svg` (source) and `docs/assets/social-card.png` (for LinkedIn and X, which do not accept SVG) |
 | Demo GIF | 20 s, guided mode → report opens, on a trial account, redacted names | Terminal recording (asciinema → GIF) |
 | Sample report | The fixture-generated HTML on GitHub Pages: `https://sebastianomarchesini.github.io/BTP-Lens/sample-report.html` | **Done:** `.github/workflows/pages.yml` + `docs/marketing/landing.html`; owner enables Pages once |
 | Landing page | One screen: tagline, `npx btp-lens`, four proof cards, links, non-affiliation | **Done:** `docs/marketing/landing.html` |
