@@ -1,6 +1,17 @@
 import type { ReportData } from '../model/snapshot.js';
 
 /**
+ * Excel opens a UTF-8 file correctly only when it starts with a byte-order
+ * mark; without it, non-ASCII org, space and app names come out garbled.
+ */
+export const CSV_BOM = '\uFEFF';
+
+/* eslint-disable no-control-regex -- removing control characters is the point */
+/** C0 controls except tab, CR and LF (which quoting handles), and DEL. */
+const CONTROL_CHARACTERS = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g;
+/* eslint-enable no-control-regex */
+
+/**
  * RFC 4180 cell. Cells that a spreadsheet would treat as a formula
  * (=, +, -, @, tab, CR) get a leading apostrophe (OWASP CSV injection).
  */
@@ -13,12 +24,13 @@ export function csvCell(value: unknown): string {
         : typeof value === 'number' || typeof value === 'boolean'
           ? String(value)
           : JSON.stringify(value);
+  text = text.replace(CONTROL_CHARACTERS, '');
   if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 function toCsv(header: string[], rows: unknown[][]): string {
-  return [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+  return CSV_BOM + [header, ...rows].map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
 }
 
 export function renderFindingsCsv(data: ReportData): string {

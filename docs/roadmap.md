@@ -23,6 +23,17 @@ Moved to the 0.1.x and 0.2 releases:
 - [ ] Three usability sessions with non-developers
 - [x] npm publish with provenance; GitHub release with changelog (tag-triggered `release.yml`)
 
+## v0.1.1
+
+Small items left open by the [pre-release audit](audits/2026-10-11-release-0.1.0-audit.md), all low severity; each is a self-contained change with a test:
+
+- Findings page: virtualize the list (it freezes for seconds above about 1500 findings)
+- Report accessibility: live region for filter result counts, forced-colors styling of the selected severity filter, a text alternative for the severity chart, distinct card landmark names, a print stylesheet
+- Proxy and Windows: Windows syntax for `HTTPS_PROXY`, `NODE_USE_ENV_PROXY` and `NODE_EXTRA_CA_CERTS` in README and the hints; say that the certificate file must be PEM; a plain message instead of Node's stack trace when the proxy URL is malformed; read `HOMEDRIVE`/`HOMEPATH` like the cf CLI when looking for its config
+- Analyzer: an invalid droplet timestamp must not produce "NaN months ago" or an unloadable snapshot; note on future-dated droplets
+- CLI: retry budget and hints for 407 and TLS failures during a scan; `--api` with a trailing path; guided-mode messages that mention `--api`; verify an existing cf CLI session with one API call before accepting it; swallow input typed while the wizard is busy; `report --from` on a non-regular file; a hint on 403 at the bootstrap org lookup; clearer messages for an empty `--out` and non-snapshot JSON
+- Getting-started guide: the report folder is relative to the terminal's current directory
+
 ## v0.2
 
 - Single executables for Windows and macOS (Node single-executable application), signed once funding allows

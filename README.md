@@ -75,7 +75,7 @@ btp-lens version
   - `1`: findings met the threshold.
   - `2`: tool error.
 
-The HTML report is a single file. Fonts, themes and data are embedded, it follows your light or dark system setting, and it works at phone width. It carries a Content Security Policy with `connect-src 'none'`, so the browser itself refuses to let it connect anywhere, and only the scripts bundled at build time may run. The CSV output neutralizes spreadsheet formulas, and the SARIF output (2.1.0) is ready for code-scanning tools. Report folders and files are created readable by you only.
+The HTML report is a single file. Fonts, themes and data are embedded, it follows your light or dark system setting, and it works at phone width. It carries a Content Security Policy with `connect-src 'none'`, so the browser itself refuses to let it connect anywhere, and only the scripts bundled at build time may run. The CSV output is UTF-8 with a byte-order mark, so Excel shows non-ASCII names correctly, and it neutralizes spreadsheet formulas (a name starting with `=`, `+`, `-` or `@` gets a leading apostrophe). The SARIF output (2.1.0) is ready for code-scanning tools. Report folders and files are created readable by you only.
 
 ## Permissions
 

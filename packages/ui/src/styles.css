@@ -108,6 +108,10 @@ body {
   text-align: right;
 }
 
+.page:focus {
+  outline: none;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

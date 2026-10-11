@@ -12,7 +12,7 @@ import {
   Tab,
   TabContainer,
 } from '@ui5/webcomponents-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
 import logoUrl from '../assets/logo.svg';
 import { formatDateTime } from '../data/format';
@@ -71,6 +71,22 @@ export function AppShell() {
   const { pathname } = useLocation();
   const data = report.data ?? null;
   const [themeOpener, setThemeOpener] = useState<HTMLElement | null>(null);
+  const section = TABS.find((tab) => tab.path === pathname)?.label ?? 'Report';
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+
+  // One document title and one page heading per section, and focus moved to the
+  // page on navigation: a title change alone is not announced in a single-page app.
+  useEffect(() => {
+    document.title = `${section} · BTP Lens report`;
+  }, [section]);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    mainRef.current?.focus();
+  }, [pathname]);
 
   let content;
   if (report.isPending) {
@@ -137,7 +153,12 @@ export function AppShell() {
           </TabContainer>
         </nav>
       )}
-      <main className="page">{content}</main>
+      <main className="page" ref={mainRef} tabIndex={-1} aria-labelledby="page-title">
+        <h1 id="page-title" className="visually-hidden">
+          {data ? `${section} · ${scopeLabel(data.scope)}` : section}
+        </h1>
+        {content}
+      </main>
       <footer className="footer">
         {data
           ? `${data.tool.name} ${data.tool.version} · read-only scan of ${data.scope.apiEndpoint} · `

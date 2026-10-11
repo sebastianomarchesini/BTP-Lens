@@ -14,6 +14,8 @@ First public release. It covers guided mode, the app inventory, the `APP_NO_RECE
 - **Output files:** reports are never written through a symbolic link, an existing report file is tightened to `0600`, and file-system errors are explained in plain words.
 - **Terminal filter:** `Basic` credentials and the cf CLI config field names (`AccessToken`, `RefreshToken`, `UAAOAuthClientSecret`) are redacted too.
 - `--no-probe-routes` is hidden from `--help` and the snapshot records `probeRoutes: false`, because no route probe exists yet. `--fail-on` no longer prints its default twice. `btp-lens guided` in a script (no terminal) prints the usage hint and exits 2 instead of writing escape codes to the pipe.
+- **CSV:** the files start with a UTF-8 byte-order mark, so Excel opens non-ASCII org, space and app names correctly, and control characters are dropped from cells.
+- **Report accessibility:** the document title names the section (`Apps · BTP Lens report`), every section has a page heading, and focus moves to the page on navigation so screen readers announce it.
 - **Licenses:** the report and `THIRD_PARTY_LICENSES.md` now carry the Unicode CLDR notice (locale data) and the Preact MIT notice (vendored by UI5 Web Components).
 - **Docs:** README, privacy, FAQ, permissions, data sources, security policy and the landing page describe what 0.1.0 does rather than what is planned; the CLA text now exists (`docs/CLA.md`); links to GitHub Discussions were replaced by issues.
 - **Release workflow:** runs the same gates as CI (coverage, sample report, offline Playwright check); CI also runs on version tags; the README shipped to npm has its links pinned to the release tag.

@@ -42,13 +42,23 @@ test('the report works from disk with networking disabled', async ({ page, conte
   await expect(kpis.getByText('8', { exact: true })).toBeVisible();
   await expect(page.getByText('Top risky apps')).toBeVisible();
 
+  await expect(page).toHaveTitle('Overview · BTP Lens report');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Overview · acme-prod' }),
+  ).toBeAttached();
+
   await page.getByRole('tab', { name: 'Findings' }).click();
   await expect(page).toHaveURL(/#\/findings$/);
   await expect(page.getByRole('article')).toHaveCount(3);
+  await expect(page).toHaveTitle('Findings · BTP Lens report');
 
   await page.getByRole('tab', { name: 'Apps' }).click();
   await expect(page).toHaveURL(/#\/apps$/);
   await expect(page.getByRole('gridcell', { name: 'legacy-reporting', exact: true })).toBeVisible();
+  await expect(page).toHaveTitle('Apps · BTP Lens report');
+  await expect(page.getByRole('heading', { level: 1, name: 'Apps · acme-prod' })).toBeAttached();
+  // Focus moved to the page, so a screen reader announces the new section.
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe('MAIN');
 
   // The embedded "72" font loaded from the file itself.
   expect(await page.evaluate(() => document.fonts.check('16px "72"'))).toBe(true);
