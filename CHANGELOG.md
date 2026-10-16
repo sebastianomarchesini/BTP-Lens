@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- The Cloud Foundry client is typed against `ReadOnlyHttp`, a view of the HTTP layer with a single `get` method whose request has no method and no body field, so its code cannot ask for anything but `GET`. A type-level test fails CI if the client is ever given more. The allow-list still refuses every other method for the CF API host, as before.
+
+### Added
+
+- `docs/due-diligence.md`: answers to the questions that managers and security, legal and procurement teams ask before a first run, each pointing to the code, test or document behind it.
+
 ## 0.1.0 (2026-10-10)
 
 First public release. It covers guided mode, the app inventory, the `APP_NO_RECENT_DEPLOY` rule and every report format. The other rules in [docs/rules.md](docs/rules.md) (runtime and stack end of life, buildpack age, idle apps, SAPUI5 maintenance, `@sap/*` packages, known CVEs and plain-text secrets) and the `sbom` command arrive in the next releases.

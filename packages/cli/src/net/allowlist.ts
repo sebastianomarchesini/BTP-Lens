@@ -6,7 +6,14 @@
  */
 import { EgressDeniedError } from './errors.js';
 
-/** The only methods the HTTP layer can issue at all. */
+/**
+ * The only methods the HTTP layer can issue at all. Each rule below decides
+ * which host and path may use which one: the customer's CF API and log cache
+ * allow GET only, and POST is allowed on exactly two paths, the UAA token
+ * endpoint (`/oauth/token`, the sign-in, as `cf login` does) and OSV.dev's
+ * `/v1/querybatch` (public package names, never credentials). The CF client
+ * cannot even ask for POST: it only sees `ReadOnlyHttp` (`http/httpClient.ts`).
+ */
 export type HttpMethod = 'GET' | 'POST';
 
 export interface EgressRule {
