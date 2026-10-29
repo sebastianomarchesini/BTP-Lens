@@ -2,8 +2,9 @@ import { mkdir, mkdtemp, realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { collectProject } from '../../../../src/collectors/project/index.js';
+import { MAX_FILES_LISTED, collectProject } from '../../../../src/collectors/project/index.js';
 import { MAX_FILE_BYTES } from '../../../../src/collectors/project/read.js';
+import { scanProject } from '../../../../src/project.js';
 import { isSafeRelativePath } from '../../../../src/model/paths.js';
 import { RawProjectSchema } from '../../../../src/model/raw.js';
 
@@ -115,6 +116,83 @@ describe('collectProject', () => {
     ]);
     expect(project.files).toEqual(['.gitignore', 'app/.gitignore', 'package.json']);
     expect(project.gitIgnore).toEqual({ present: true });
+    expect(project.filesOpened).toBe(3);
+  });
+
+  it('finds the repository above the project root and applies the .gitignore files in between', async () => {
+    const top = await tmp();
+    await mkdir(join(top, '.git'));
+    await file(top, '.gitignore', '# POISON_top\n*.mtar\n');
+    await file(top, 'apps/.gitignore', '!keep.mtar\n');
+    const root = join(top, 'apps', 'acme');
+    await file(root, 'package.json', '{ "name": "acme" }');
+    await file(root, 'mta_archives/acme_1.0.0.mtar', Buffer.alloc(64, 0x50));
+    await file(root, 'keep.mtar', Buffer.alloc(10, 0x50));
+    await file(root, 'db/.gitignore', '!*.mtar\n');
+    await file(root, 'db/again.mtar', Buffer.alloc(10, 0x50));
+    const project = await collectProject(root);
+    expect(project.repository).toBe(true);
+    expect(project.gitIgnore).toEqual({ present: false });
+    expect(project.archives).toEqual([
+      { file: 'db/again.mtar', bytes: 10, ignored: false },
+      { file: 'keep.mtar', bytes: 10, ignored: false },
+      { file: 'mta_archives/acme_1.0.0.mtar', bytes: 64, ignored: true },
+    ]);
+    // The ancestors' .gitignore files are consulted, never listed or counted.
+    expect(project.files).toEqual(['db/.gitignore', 'package.json']);
+    expect(project.filesOpened).toBe(2);
+    expect(project.unreadable).toEqual([]);
+    expect(JSON.stringify(project)).not.toMatch(/POISON|apps/);
+  });
+
+  it('ignores the whole project when an ancestor .gitignore excludes a directory on its path', async () => {
+    const top = await tmp();
+    await mkdir(join(top, '.git'));
+    await file(top, '.gitignore', 'vendor/\n');
+    const root = join(top, 'vendor', 'acme');
+    await file(root, 'package.json', '{}');
+    await file(root, 'mta_archives/acme_1.0.0.mtar', Buffer.alloc(64, 0x50));
+    const project = await collectProject(root);
+    expect(project.repository).toBe(true);
+    expect(project.archives).toEqual([
+      { file: 'mta_archives/acme_1.0.0.mtar', bytes: 64, ignored: true },
+    ]);
+  });
+
+  it('records a cds configuration nested beyond the depth limit as unreadable and still completes', async () => {
+    const nested = (depth: number): string => `${'{"a":'.repeat(depth)}1${'}'.repeat(depth)}`;
+    const root = await tmp();
+    await file(root, '.cdsrc.json', nested(10_000));
+    await file(root, '.cdsrc.yaml', 'requires:\n  auth: basic\n');
+    await file(root, 'package.json', `{ "name": "acme", "cds": ${nested(10_000)} }`);
+    const project = await collectProject(root);
+    expect(project.unreadable).toEqual([
+      { file: '.cdsrc.json', kind: 'json' },
+      { file: 'package.json', kind: 'json' },
+    ]);
+    expect(project.sourcesRead).toEqual(['.cdsrc.yaml']);
+    expect(project.files).toEqual(['.cdsrc.yaml']);
+    expect(project.cds.effective.development.authKind).toBe('basic');
+    expect(project.packageJson.present).toBe(false);
+
+    const snapshot = await scanProject({ path: root });
+    expect(snapshot.checks.map((check) => [check.status, check.reason])).toEqual(
+      snapshot.checks.map(() => ['ran', undefined]),
+    );
+    expect(snapshot.raw.projects).toHaveLength(1);
+  });
+
+  it('counts every file it opened, beyond the listing cap', async () => {
+    const root = await tmp();
+    await file(root, 'package.json', '{}');
+    for (let i = 0; i <= MAX_FILES_LISTED; i += 1) {
+      await file(root, `db/e${String(i).padStart(4, '0')}.cds`, `entity E${i} { k: Integer; }`);
+    }
+    const project = await collectProject(root);
+    expect(project.files).toHaveLength(MAX_FILES_LISTED);
+    expect(project.filesTruncated).toBe(true);
+    expect(project.filesOpened).toBe(MAX_FILES_LISTED + 2);
+    expect(project.cdsFiles).toHaveLength(MAX_FILES_LISTED + 1);
   });
 
   it('collects descriptors anywhere in the tree and keeps every path relative and safe', async () => {
@@ -146,7 +224,7 @@ describe('collectProject', () => {
       'test/data/z.csv',
     ]);
     expect(project.seedData[1]?.sensitiveColumns).toEqual([
-      { column: 'password', kind: 'secret', rowsMatching: 1 },
+      { columnIndex: 2, kind: 'secret', rowsMatching: 1 },
     ]);
     const paths = [
       ...project.files,
@@ -169,6 +247,7 @@ describe('collectProject', () => {
       sourcesRead: ['.cdsrc.yaml'],
       files: ['.cdsrc.yaml'],
       filesTruncated: false,
+      filesOpened: 1,
       unreadable: [],
       repository: false,
       mta: null,

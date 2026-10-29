@@ -6,7 +6,6 @@ import {
   type RawMtaResource,
   type RawXsSecurity,
 } from '../../model/raw.js';
-import { redactUrlCredentials } from '../sanitize.js';
 import {
   identifierOrNull,
   identifiers,
@@ -29,17 +28,29 @@ const MAX_MODULES = 200;
 const MAX_RESOURCES = 200;
 const MAX_REQUIRES = 50;
 const MAX_BUILDPACK_LENGTH = 200;
+const BUILDPACK_NAME = /^[A-Za-z0-9_.-]{1,100}$/;
+const BUILDPACK_URL = /^(https?|git|git\+https?):\/\//i;
 
 export interface MtaResult {
   mta: RawMta;
   xsSecurity: RawXsSecurity[];
 }
 
-/** A buildpack name, or a buildpack URL without credentials and query. */
+/**
+ * A buildpack name, or an http(s)/git buildpack URL reduced to scheme, host
+ * and path (no userinfo, query or fragment). Anything else, such as a local
+ * path, is null: it could carry a user name or a directory layout.
+ */
 export function buildpackOf(value: unknown): string | null {
-  if (typeof value !== 'string' || value === '') return null;
-  const clean = redactUrlCredentials(value).replace(/[?#].*$/, '');
-  return clean.slice(0, MAX_BUILDPACK_LENGTH);
+  if (typeof value !== 'string') return null;
+  if (BUILDPACK_NAME.test(value)) return value;
+  if (!BUILDPACK_URL.test(value)) return null;
+  try {
+    const url = new URL(value);
+    return `${url.protocol}//${url.host}${url.pathname}`.slice(0, MAX_BUILDPACK_LENGTH);
+  } catch {
+    return null;
+  }
 }
 
 /** A module path as a safe relative path (`./srv` counts as `srv`), else null. */

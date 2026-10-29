@@ -3,9 +3,10 @@ import type { RawHtmlBootstrap, Ui5VersionForm } from '../../model/raw.js';
 /*
  * SAPUI5 bootstrap scripts in HTML files: a `<script>` with
  * id="sap-ui-bootstrap" or a src ending in sap-ui-core.js. Attributes are
- * read with a small tokenizer, never a nested regex. Of the src only origin
- * and path survive (no userinfo, query or fragment); the integrity value and
- * every other attribute are never stored.
+ * read with a small tokenizer, never a nested regex. Of an http(s) src only
+ * origin and path survive (no userinfo, query or fragment), of a relative src
+ * only the file name (a path could be absolute or climb out of the project);
+ * the integrity value and every other attribute are never stored.
  */
 
 const MAX_BOOTSTRAPS_PER_FILE = 200;
@@ -20,6 +21,8 @@ const TEST_PAGE_NAME = /(flpSandbox|\.qunit)\.html$/i;
 interface ScriptTag {
   /** Offset of `<script` in the text. */
   index: number;
+  /** Offset just after the closing `>` (or where the tag was cut). */
+  end: number;
   attributes: Map<string, string>;
 }
 
@@ -57,15 +60,22 @@ function readTag(fullText: string, start: number): ScriptTag {
     }
     if (name !== '') attributes.set(name.toLowerCase(), value);
   }
-  return { index: start, attributes };
+  return { index: start, end: start + Math.min(i + 1, text.length), attributes };
 }
 
-function scriptTags(text: string): ScriptTag[] {
+/**
+ * The bootstrap tags of a page, at most MAX_BOOTSTRAPS_PER_FILE. Every
+ * `<script` is examined; the scan resumes after each tag, so the text is
+ * read once whatever the number of tags.
+ */
+function bootstrapTags(text: string): ScriptTag[] {
   const tags: ScriptTag[] = [];
   const pattern = /<script\b/gi;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text)) !== null && tags.length < MAX_BOOTSTRAPS_PER_FILE) {
-    tags.push(readTag(text, match.index));
+    const tag = readTag(text, match.index);
+    if (isBootstrap(tag)) tags.push(tag);
+    pattern.lastIndex = Math.max(pattern.lastIndex, tag.end);
   }
   return tags;
 }
@@ -88,7 +98,13 @@ export interface SafeSrc {
   external: boolean;
 }
 
-/** Origin and path of an http(s) URL, the path of a relative one, or the non-http marker. */
+/** The file name part of a relative src (after the last `/`, before `?` or `#`). */
+function fileNameOf(src: string): string {
+  const path = pathPart(src);
+  return path.slice(path.lastIndexOf('/') + 1);
+}
+
+/** Origin and path of an http(s) URL, the file name of a relative one, or the non-http marker. */
 export function safeSrc(raw: string): SafeSrc {
   const trimmed = raw.trim();
   // A protocol-relative `//host/path` loads from the page's scheme, so it is external.
@@ -102,7 +118,7 @@ export function safeSrc(raw: string): SafeSrc {
     }
   }
   if (SCHEME.test(trimmed)) return { src: NON_HTTP_SRC, external: false };
-  return { src: pathPart(trimmed).slice(0, MAX_SRC_LENGTH), external: false };
+  return { src: fileNameOf(trimmed).slice(0, MAX_SRC_LENGTH), external: false };
 }
 
 export function versionFormOf(src: string, external: boolean): Ui5VersionForm {
@@ -125,18 +141,16 @@ function lineOf(text: string, index: number): number {
 
 export function scanHtml(text: string, file: string): RawHtmlBootstrap[] {
   const testPage = isTestPage(file);
-  return scriptTags(text)
-    .filter(isBootstrap)
-    .map((tag) => {
-      const { src, external } = safeSrc(tag.attributes.get('src') ?? '');
-      return {
-        file,
-        line: lineOf(text, tag.index),
-        src,
-        external,
-        integrity: tag.attributes.has('integrity'),
-        versionForm: versionFormOf(src, external),
-        testPage,
-      };
-    });
+  return bootstrapTags(text).map((tag) => {
+    const { src, external } = safeSrc(tag.attributes.get('src') ?? '');
+    return {
+      file,
+      line: lineOf(text, tag.index),
+      src,
+      external,
+      integrity: tag.attributes.has('integrity'),
+      versionForm: versionFormOf(src, external),
+      testPage,
+    };
+  });
 }

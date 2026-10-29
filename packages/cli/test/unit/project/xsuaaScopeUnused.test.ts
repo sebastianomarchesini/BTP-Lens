@@ -358,7 +358,7 @@ describe('XSUAA_SCOPE_UNUSED', () => {
       ),
       seedData: POISON.map((value) =>
         seedCsv(value, {
-          sensitiveColumns: [{ column: value, kind: 'secret', rowsMatching: 1 }],
+          sensitiveColumns: [{ columnIndex: 1, kind: 'secret', rowsMatching: 1 }],
         }),
       ),
       archives: POISON.map((value) => archive(value)),

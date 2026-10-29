@@ -33,7 +33,7 @@ export async function scanProject(options: ScanProjectOptions): Promise<Snapshot
   const projects = project === undefined ? [] : [project];
   if (project !== undefined) {
     log(
-      `Read ${project.files.length} project file(s)` +
+      `Read ${project.filesOpened} project file(s)` +
         `${project.unreadable.length > 0 ? `, ${project.unreadable.length} unreadable` : ''}` +
         ` in project ${project.id}`,
     );

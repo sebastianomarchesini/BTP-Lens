@@ -1,12 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   type CdsSourceValue,
+  MAX_CONFIG_DEPTH,
   cdsViewOf,
   deepMerge,
   effectiveCdsViews,
+  exceedsConfigDepth,
   mergeCdsSources,
   resolveProfile,
 } from '../../../../src/collectors/project/cdsConfig.js';
+
+/** `{ a: { a: { … value } } }` with `depth` objects. */
+function nested(depth: number, leaf: unknown = 1): unknown {
+  let value = leaf;
+  for (let i = 0; i < depth; i += 1) value = { a: value };
+  return value;
+}
 
 const sources = (...values: [CdsSourceValue['source'], unknown][]): CdsSourceValue[] =>
   values.map(([source, value]) => ({ source, value }));
@@ -168,5 +177,45 @@ describe('cdsViewOf', () => {
     expect(
       cdsViewOf({ requires: { auth: { restrict_all_services: 'no' } } }).restrictAllServices,
     ).toBeNull();
+  });
+});
+
+describe('nesting depth', () => {
+  it('measures depth without recursion', () => {
+    expect(exceedsConfigDepth(nested(MAX_CONFIG_DEPTH - 1))).toBe(false);
+    expect(exceedsConfigDepth(nested(MAX_CONFIG_DEPTH))).toBe(false);
+    expect(exceedsConfigDepth(nested(MAX_CONFIG_DEPTH + 1))).toBe(true);
+    expect(exceedsConfigDepth(nested(100_000))).toBe(true);
+    expect(exceedsConfigDepth({ a: [[1]] }, 3)).toBe(false);
+    expect(exceedsConfigDepth({ a: [[[1]]] }, 3)).toBe(true);
+    expect(exceedsConfigDepth('x')).toBe(false);
+    expect(exceedsConfigDepth(null)).toBe(false);
+  });
+
+  it('merges and resolves a hostile depth without exhausting the stack, dropping what lies beyond', () => {
+    const deep = nested(100_000);
+    expect(() => deepMerge(deep, deep)).not.toThrow();
+    expect(() => resolveProfile(deep, 'production')).not.toThrow();
+    expect(() => effectiveCdsViews(sources(['.cdsrc.json', deep]))).not.toThrow();
+    expect(() =>
+      effectiveCdsViews(sources(['.cdsrc.json', deep], ['package.json', deep])),
+    ).not.toThrow();
+    expect(resolveProfile(nested(MAX_CONFIG_DEPTH - 1), 'production')).toEqual(
+      nested(MAX_CONFIG_DEPTH - 1),
+    );
+    expect(resolveProfile(nested(MAX_CONFIG_DEPTH + 5), 'production')).toEqual(
+      nested(MAX_CONFIG_DEPTH - 1, {}),
+    );
+    expect(deepMerge(nested(MAX_CONFIG_DEPTH - 1), nested(MAX_CONFIG_DEPTH - 1, 2))).toEqual(
+      nested(MAX_CONFIG_DEPTH - 1, 2),
+    );
+    expect(deepMerge(nested(MAX_CONFIG_DEPTH + 5), nested(MAX_CONFIG_DEPTH + 5, 2))).toEqual(
+      nested(MAX_CONFIG_DEPTH - 1, { a: undefined }),
+    );
+  });
+
+  it('still reads the facts of a realistic configuration next to a deep subtree', () => {
+    const config = { requires: { auth: { kind: 'xsuaa' } }, junk: nested(50_000) };
+    expect(effectiveCdsViews(sources(['.cdsrc.json', config])).production.authKind).toBe('xsuaa');
   });
 });

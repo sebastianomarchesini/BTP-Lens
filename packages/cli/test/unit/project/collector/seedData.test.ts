@@ -69,7 +69,7 @@ describe('seed CSV header', () => {
     const result = scan(`cardNumber\n${rows.join('\n')}\n`);
     expect(result.rowsChecked).toBe(MAX_ROWS_CHECKED);
     expect(result.sensitiveColumns).toEqual([
-      { column: 'cardNumber', kind: 'card', rowsMatching: MAX_ROWS_CHECKED },
+      { columnIndex: 1, kind: 'card', rowsMatching: MAX_ROWS_CHECKED },
     ]);
   });
 });
@@ -139,7 +139,7 @@ describe('value checks', () => {
     expect(isIban('XX')).toBe(false);
   });
 
-  it('counts matching rows per sensitive column and stores no value', () => {
+  it('counts matching rows per sensitive column and stores neither a value nor a name', () => {
     const result = scan(
       [
         'ID,firstName,creditCardNo,iban,password,notes',
@@ -149,15 +149,34 @@ describe('value checks', () => {
       ].join('\n'),
     );
     expect(result.sensitiveColumns).toEqual([
-      { column: 'creditCardNo', kind: 'card', rowsMatching: 2 },
-      { column: 'iban', kind: 'iban', rowsMatching: 1 },
-      { column: 'password', kind: 'secret', rowsMatching: 1 },
+      { columnIndex: 3, kind: 'card', rowsMatching: 2 },
+      { columnIndex: 4, kind: 'iban', rowsMatching: 1 },
+      { columnIndex: 5, kind: 'secret', rowsMatching: 1 },
     ]);
     const text = JSON.stringify(result);
     expect(text).not.toContain('POISON');
     expect(text).not.toContain('4111');
     expect(text).not.toContain('Mary');
     expect(text).not.toContain('firstName');
+    expect(text).not.toContain('creditCardNo');
+    expect(text).not.toContain('password');
     expect(text).not.toContain('notes');
+  });
+
+  it('keeps a first-row cell value out of the result when a header-less file looks like a header', () => {
+    // Every field of the first row is identifier-shaped, so it is taken for a
+    // header; the "column name" that matches the secret pattern is a cell value.
+    const result = scanSeedCsv(
+      'admin,POISON_password_cell,berlin\nbob,POISON_hunter2,paris\n',
+      'test/data/users.csv',
+    );
+    expect(result).toEqual({
+      file: 'test/data/users.csv',
+      columnCount: 3,
+      headerRejected: false,
+      rowsChecked: 1,
+      sensitiveColumns: [{ columnIndex: 2, kind: 'secret', rowsMatching: 1 }],
+    });
+    expect(JSON.stringify(result)).not.toMatch(/POISON|admin|berlin|bob|paris/);
   });
 });

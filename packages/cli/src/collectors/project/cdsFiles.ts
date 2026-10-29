@@ -222,6 +222,9 @@ class Scanner {
 
   /** Consumes the rest of a statement; `actions` when a bound-actions block was opened. */
   scanStatementEnd(options: StatementEndOptions): 'end' | 'actions' {
+    // The word after `as` is an alias, never the start of the next statement:
+    // SAP Fiori tools write `using X as service from '…'` in every annotations.cds.
+    let afterAs = false;
     while (!this.eof()) {
       this.skipWs();
       const c = this.peek();
@@ -237,7 +240,7 @@ class Scanner {
       else if (WORD_START.test(c)) {
         const save = this.pos;
         const word = this.readWord();
-        if (STATEMENT_KEYWORDS.has(word)) {
+        if (STATEMENT_KEYWORDS.has(word) && !afterAs) {
           this.pos = save;
           return 'end';
         }
@@ -248,33 +251,39 @@ class Scanner {
             return 'actions';
           }
         }
+        afterAs = word === 'as';
+        continue;
       } else this.pos += 1;
+      afterAs = false;
     }
     return 'end';
   }
 }
+
+/*
+ * Every search below runs on the slice of one region only, never on the
+ * whole file: a search that ran to the end of the file for each definition
+ * would make the scan quadratic (tens of seconds for a generated model).
+ */
 
 /** Absolute offsets just past each `KEY:` written bare (`@key:`) or in a group (`(key:`, `, key:`). */
 function annotationKeys(scanner: Scanner, regions: Region[], key: string): number[] {
   const pattern = new RegExp(`(?:@|[(,]\\s*)${key}\\s*:\\s*`, 'g');
   const found: number[] = [];
   for (const region of regions) {
-    pattern.lastIndex = region.start;
+    const text = scanner.masked.slice(region.start, region.end);
+    pattern.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = pattern.exec(scanner.masked)) !== null && match.index < region.end) {
-      found.push(match.index + match[0].length);
+    while ((match = pattern.exec(text)) !== null) {
+      found.push(region.start + match.index + match[0].length);
     }
   }
   return found;
 }
 
 function hasToken(scanner: Scanner, regions: Region[], token: string): boolean {
-  const pattern = new RegExp(`(?:@|[(,]\\s*)${token.replace(/\./g, '\\.')}\\b`, 'g');
-  return regions.some((region) => {
-    pattern.lastIndex = region.start;
-    const match = pattern.exec(scanner.masked);
-    return match !== null && match.index < region.end;
-  });
+  const pattern = new RegExp(`(?:@|[(,]\\s*)${token.replace(/\./g, '\\.')}\\b`);
+  return regions.some((region) => pattern.test(scanner.masked.slice(region.start, region.end)));
 }
 
 /** The string or bare values at `index`: `'x'`, `x`, or `['a', b]`. */
@@ -352,11 +361,11 @@ function restrictToIn(scanner: Scanner, regions: Region[]): string[] {
       }
       end += 1;
     }
+    const array = masked.slice(at, end);
     const toKey = /(?:[{,]\s*)to\s*:\s*/g;
-    toKey.lastIndex = at;
     let match: RegExpExecArray | null;
-    while ((match = toKey.exec(masked)) !== null && match.index < end) {
-      values.push(...readValues(scanner, match.index + match[0].length));
+    while ((match = toKey.exec(array)) !== null) {
+      values.push(...readValues(scanner, at + match.index + match[0].length));
     }
   }
   return roles(values);
@@ -467,7 +476,9 @@ function parseElements(scanner: Scanner, facts: ElementFacts): void {
       if (isIdentifier(word) && facts.fields.length < CDS_LIMITS.fields) facts.fields.push(word);
       parseElementType(scanner, word, facts);
       const region = { start: annotationStart ?? wordStart, end: scanner.pos };
-      if (hasToken(scanner, [region], 'PersonalData')) facts.personalData = true;
+      if (!facts.personalData && hasToken(scanner, [region], 'PersonalData')) {
+        facts.personalData = true;
+      }
       annotationStart = null;
     } else scanner.pos += 1;
   }
@@ -504,17 +515,18 @@ export function scanCds(text: string, file: string): RawCdsFile {
     const headerStart = scanner.pos;
     const stop = scanner.scanHeader();
     const regions = [prefix, { start: headerStart, end: scanner.pos }];
+    const stored = isIdentifier(name) && out.services.length < CDS_LIMITS.services;
+    // Annotations are read for stored services only; past the cap, the body is still walked.
     const service: RawCdsService = {
       name,
       line: scanner.lineAt(nameStart),
-      requires: requiresIn(scanner, regions),
-      restrictTo: restrictToIn(scanner, regions),
-      protocolNone: protocolNoneIn(scanner, regions),
-      external: hasToken(scanner, regions, 'cds.external'),
+      requires: stored ? requiresIn(scanner, regions) : [],
+      restrictTo: stored ? restrictToIn(scanner, regions) : [],
+      protocolNone: stored && protocolNoneIn(scanner, regions),
+      external: stored && hasToken(scanner, regions, 'cds.external'),
       entities: [],
       actions: [],
     };
-    const stored = isIdentifier(name) && out.services.length < CDS_LIMITS.services;
     if (stored) out.services.push(service);
     if (stop === '{') {
       scanner.pos += 1;
@@ -531,10 +543,16 @@ export function scanCds(text: string, file: string): RawCdsFile {
     const stop = scanner.scanHeader();
     const regions = [prefix, { start: headerStart, end: scanner.pos }];
     const inService = frame.kind !== 'top';
+    // Past the caps a definition is only walked over; none of its annotations are read.
+    const stored =
+      isIdentifier(name) &&
+      (frame.kind === 'service'
+        ? frame.stored && frame.service.entities.length < CDS_LIMITS.serviceEntities
+        : frame.kind === 'top' && out.entities.length < CDS_LIMITS.entities);
     const facts: ElementFacts = {
       fields: [],
       associations: [],
-      personalData: hasToken(scanner, regions, 'PersonalData'),
+      personalData: stored && hasToken(scanner, regions, 'PersonalData'),
     };
     let projectionOf: string | null = null;
     let tail: 'end' | 'actions' = 'end';
@@ -542,8 +560,8 @@ export function scanCds(text: string, file: string): RawCdsFile {
       projectionOf = parseProjectionTarget(scanner);
       tail = scanner.scanStatementEnd({ allowActions: true, stopAtAnnotation: true });
     } else if (stop === '{') {
-      // Elements are collected for model entities only; a service body is skipped.
-      if (inService) scanner.skipGroup();
+      // Elements are collected for stored model entities only; other bodies are skipped.
+      if (inService || !stored) scanner.skipGroup();
       else {
         scanner.pos += 1;
         parseElements(scanner, facts);
@@ -551,22 +569,20 @@ export function scanCds(text: string, file: string): RawCdsFile {
       tail = scanner.scanStatementEnd({ allowActions: true, stopAtAnnotation: true });
     } else if (stop === ';') scanner.pos += 1;
 
-    if (!isIdentifier(name)) {
+    if (!stored) {
       if (tail === 'actions') pushActions(frameService(frame));
       return;
     }
     if (frame.kind === 'service') {
-      if (frame.service.entities.length < CDS_LIMITS.serviceEntities) {
-        frame.service.entities.push({
-          name,
-          line,
-          requires: requiresIn(scanner, regions),
-          restrictTo: restrictToIn(scanner, regions),
-          readonly: hasToken(scanner, regions, 'readonly'),
-          projectionOf,
-        });
-      }
-    } else if (frame.kind === 'top' && out.entities.length < CDS_LIMITS.entities) {
+      frame.service.entities.push({
+        name,
+        line,
+        requires: requiresIn(scanner, regions),
+        restrictTo: restrictToIn(scanner, regions),
+        readonly: hasToken(scanner, regions, 'readonly'),
+        projectionOf,
+      });
+    } else {
       const entity: RawCdsEntity = { name, line, ...facts };
       out.entities.push(entity);
     }

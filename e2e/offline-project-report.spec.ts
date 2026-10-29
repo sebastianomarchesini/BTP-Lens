@@ -27,7 +27,7 @@ test('the project report works from disk with networking disabled', async ({ pag
 
   await page.getByRole('tab', { name: 'Findings' }).click();
   await expect(page).toHaveURL(/#\/findings$/);
-  await expect(page.getByRole('article')).toHaveCount(16);
+  await expect(page.getByRole('article')).toHaveCount(17);
   // A finding with a known line renders as file:line under the project name.
   await expect(
     page.locator('code.finding-location', { hasText: 'srv/services.cds:4' }),
@@ -64,4 +64,14 @@ test('the project report is usable at phone width without horizontal page scroll
     );
     expect(overflow, `horizontal overflow on ${hash}`).toBeLessThanOrEqual(0);
   }
+
+  // The single project row grows when Org, Space and Last deploy pop in; the table body
+  // must grow with it so the severity status is not clipped out of the 44px body.
+  await page.goto(`${REPORT}#/apps`);
+  const row = page.getByRole('row').filter({ hasText: 'acme-incidents' });
+  const status = row.locator('[data-component-name="ObjectStatus"]', { hasText: 'Critical' });
+  await expect(status).toBeVisible();
+  await expect(status).toBeInViewport({ ratio: 1 });
+  const space = row.locator('[data-column-id-cell-text="space"]', { hasText: 'project' });
+  await expect(space).toBeInViewport({ ratio: 1 });
 });

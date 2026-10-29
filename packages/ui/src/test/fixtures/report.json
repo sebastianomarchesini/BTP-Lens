@@ -447,7 +447,7 @@
     {
       "id": "SEED_DATA_SENSITIVE",
       "title": "Seed data contains card numbers, IBANs or secrets",
-      "description": "A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets. Seed data is deployed to every system and committed with the project.",
+      "description": "A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets (reported by column position, never by name). Seed data is deployed to every system and committed with the project.",
       "roles": [],
       "owasp": [
         "A04:2025"

@@ -94,7 +94,7 @@ describe('report UI', () => {
       .getAllByText(/^(\d+|—)$/)
       .map((el) => el.textContent);
     // Projects scanned, critical + high, services open, entities without annotations
-    expect(values).toEqual(['1', '3', '1', '2']);
+    expect(values).toEqual(['1', '4', '1', '2']);
     expect(document.querySelector('ui5-card-header[title-text="Top risks"]')).not.toBeNull();
     expect(document.querySelector('ui5-card-header[title-text="Top risky apps"]')).toBeNull();
     expect(screen.getByText(/The project acme-incidents was scanned on/)).toBeInTheDocument();
@@ -124,7 +124,7 @@ describe('report UI', () => {
     embed(projectSample);
     renderAt('#/findings');
     expect(await screen.findByText('srv/services.cds:4')).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(16);
+    expect(screen.getAllByRole('article')).toHaveLength(17);
     const locations = [...document.querySelectorAll('code.finding-location')].map(
       (el) => el.textContent,
     );
@@ -143,6 +143,7 @@ describe('report UI', () => {
       'app/incidents/xs-app.json',
       'mta_archives/acme-incidents_1.0.0.mtar',
       'db/data/acme.incidents-Customers.csv',
+      'test/data/POISON-headerless.csv',
       'app/incidents/webapp/index.html:7',
       'app/incidents/webapp/test/flpSandbox.html:9',
       'app/launchpage.html:6',
@@ -167,7 +168,7 @@ describe('report UI', () => {
     expect(
       await screen.findByText(/Showing findings for project acme-incidents\./),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(16);
+    expect(screen.getAllByRole('article')).toHaveLength(17);
   });
 
   it('lists projects without app-only columns or grouping', async () => {

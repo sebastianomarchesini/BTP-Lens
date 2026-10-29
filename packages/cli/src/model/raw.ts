@@ -328,13 +328,14 @@ export const SeedSensitiveKindSchema = z.enum(['card', 'iban', 'secret']);
 export type SeedSensitiveKind = z.infer<typeof SeedSensitiveKindSchema>;
 
 export const RawSeedSensitiveColumnSchema = z.object({
-  column: Identifier,
+  /** 1-based position of the column in the header; the name itself is never stored. */
+  columnIndex: Line,
   kind: SeedSensitiveKindSchema,
   rowsMatching: Count,
 });
 export type RawSeedSensitiveColumn = z.infer<typeof RawSeedSensitiveColumnSchema>;
 
-/** A seed CSV: header shape and value checks only; no header names or values are stored. */
+/** A seed CSV: header shape and value checks only; no header names or values are stored, only column positions. */
 export const RawSeedDataSchema = z.object({
   file: RelativePathSchema,
   columnCount: Count,
@@ -361,7 +362,10 @@ export type Ui5VersionForm = z.infer<typeof Ui5VersionFormSchema>;
 export const RawHtmlBootstrapSchema = z.object({
   file: RelativePathSchema,
   line: Line,
-  /** Origin and path only (no userinfo, query or fragment); `[non-http]` for other schemes. */
+  /**
+   * Of an http(s) URL the origin and path only (no userinfo, query or fragment);
+   * of a relative src the file name only; `[non-http]` for other schemes.
+   */
   src: z.string().max(200),
   external: z.boolean(),
   /** An `integrity` attribute is present (its value is never stored). */
@@ -379,8 +383,10 @@ export const RawProjectSchema = z.object({
   /** Files the collector opened (allow-listed names only), sorted. */
   files: z.array(RelativePathSchema).max(500),
   filesTruncated: z.boolean(),
+  /** How many files inside the project the collector opened (listed or unreadable), whatever the listing cap. */
+  filesOpened: Count,
   unreadable: z.array(RawUnreadableSchema).max(200),
-  /** `<root>/.git` exists (lstat only, never read). */
+  /** A `.git` entry exists in the root or one of its ancestors (lstat only, never read). */
   repository: z.boolean(),
   gitIgnore: z.object({ present: z.boolean() }),
   packageJson: RawPackageJsonSchema,

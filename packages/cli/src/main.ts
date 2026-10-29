@@ -217,7 +217,10 @@ function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
   program
     .command('report')
     .description('re-analyze a snapshot offline and write reports')
-    .requiredOption('--from <snapshot>', 'snapshot JSON written by `btp-lens scan`')
+    .requiredOption(
+      '--from <snapshot>',
+      'snapshot JSON written by `btp-lens scan` or `btp-lens project`',
+    )
     .option('--format <list>', 'report formats: html,json,csv,sarif', DEFAULT_FORMATS)
     .option('--out <dir>', 'output directory', './reports')
     .option('--fail-on <severity>', FAIL_ON_HELP, 'none')

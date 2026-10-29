@@ -101,6 +101,10 @@ export const POISON: string[] = [
   '5500000000000004',
   'jane_doe_notes',
   'POISON_big',
+  'POISON_ui',
+  'passwd-poison',
+  'POISON_password_cell',
+  'POISON_bp_path',
 ];
 
 type DeepPartial<T> = T extends (infer U)[]
@@ -141,6 +145,7 @@ export function rawProject(overrides?: DeepPartial<RawProject>): RawProject {
     sourcesRead: [],
     files: [],
     filesTruncated: false,
+    filesOpened: 0,
     unreadable: [],
     repository: false,
     gitIgnore: { present: false },

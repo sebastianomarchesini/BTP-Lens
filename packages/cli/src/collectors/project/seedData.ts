@@ -4,8 +4,9 @@ import type { RawSeedData, RawSeedSensitiveColumn, SeedSensitiveKind } from '../
  * Seed CSV files: header shape and value checks only. The header is accepted
  * when every field is identifier-shaped; then the first rows are checked for
  * card numbers (Luhn), IBANs (mod 97) and non-empty secrets in columns whose
- * name says so. Only the names of sensitive columns and counts are kept;
- * no header name otherwise, and never a value.
+ * name says so. Only the 1-based positions of sensitive columns, their kind
+ * and counts are kept: no header name (a header-less file whose first row is
+ * identifier-shaped would otherwise leak a cell value), and never a value.
  */
 
 export const MAX_ROWS_CHECKED = 200;
@@ -155,7 +156,7 @@ export function scanSeedCsv(text: string, file: string): RawSeedData {
     const kind = sensitiveKindOf(column);
     if (kind === null) return;
     const rowsMatching = dataRows.filter((row) => valueMatches(kind, row[index] ?? '')).length;
-    sensitiveColumns.push({ column, kind, rowsMatching });
+    sensitiveColumns.push({ columnIndex: index + 1, kind, rowsMatching });
   });
   return {
     file,

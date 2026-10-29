@@ -49,7 +49,7 @@ describe('startHereSentences', () => {
     const s = startHereSentences(project);
     expect(s).toEqual([
       'The project acme-incidents was scanned on Sep 29, 2026.',
-      '16 findings need attention: 3 pages load SAPUI5 from an external CDN without integrity protection; 2 entities hold personal data without @PersonalData annotations; mocked authentication is configured for production.',
+      '17 findings need attention: 3 pages load SAPUI5 from an external CDN without integrity protection; 2 seed data columns contain card numbers, IBANs or secrets; 2 entities hold personal data without @PersonalData annotations.',
       'Nothing in your project was changed: this scan only read files in the project folder.',
     ]);
   });

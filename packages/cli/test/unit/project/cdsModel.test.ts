@@ -8,6 +8,7 @@ import {
   referencedRoles,
   resolveTarget,
 } from '../../../src/analyzers/project/cdsModel.js';
+import { scanCds } from '../../../src/collectors/project/cdsFiles.js';
 import {
   action,
   annotate,
@@ -288,5 +289,32 @@ describe('personalEntities', () => {
       }),
     );
     expect(result).toMatchObject([{ name: 'Customers', personalData: true }]);
+  });
+});
+
+describe('Fiori-tools annotation files', () => {
+  it('merges restrictions declared through `using Service as service` into the service', () => {
+    const srv = scanCds(
+      `using { acme.incidents as db } from '../db/schema';
+service CatalogService { entity Books as projection on db.Books; }
+service OpenService { entity Authors as projection on db.Authors; }`,
+      'srv/cat-service.cds',
+    );
+    const app = scanCds(
+      `using CatalogService as service from '../../srv/cat-service';
+annotate service with @(requires: 'admin');
+annotate service.Books with @(restrict: [{ grant: 'READ', to: 'viewer' }]);
+annotate service.Books with @(UI.HeaderInfo: { TypeName: 'Book' });`,
+      'app/books/annotations.cds',
+    );
+    expect(app.usings).toEqual([{ alias: 'service', target: 'CatalogService' }]);
+    expect(app.services).toEqual([]);
+    const project = rawProject({ cdsFiles: [srv, app] });
+    expect(
+      effectiveServices(project).map((s) => [s.name, s.file, s.requires, s.restrictTo]),
+    ).toEqual([
+      ['CatalogService', 'srv/cat-service.cds', ['admin'], ['viewer']],
+      ['OpenService', 'srv/cat-service.cds', [], []],
+    ]);
   });
 });

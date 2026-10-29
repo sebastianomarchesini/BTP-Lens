@@ -122,13 +122,13 @@
       "lastDeployAt": null,
       "findingCounts": {
         "critical": 2,
-        "high": 1,
+        "high": 2,
         "medium": 9,
         "low": 4,
         "info": 0
       },
       "highestSeverity": "critical",
-      "riskScore": 274
+      "riskScore": 299
     }
   ],
   "findings": [
@@ -203,7 +203,7 @@
     {
       "id": "SEED_DATA_SENSITIVE",
       "severity": "high",
-      "title": "Seed data contains payment card numbers",
+      "title": "Seed data column 6 contains payment card numbers",
       "app": {
         "guid": "project:acme-incidents",
         "name": "acme-incidents",
@@ -211,8 +211,8 @@
         "org": "local"
       },
       "evidence": {
-        "subject": "db/data/acme.incidents-Customers.csv#creditCardNo",
-        "column": "creditCardNo",
+        "subject": "db/data/acme.incidents-Customers.csv#6",
+        "columnIndex": 6,
         "kind": "card",
         "rowsChecked": 2,
         "rowsMatching": 1,
@@ -227,6 +227,35 @@
       ],
       "location": {
         "file": "db/data/acme.incidents-Customers.csv"
+      }
+    },
+    {
+      "id": "SEED_DATA_SENSITIVE",
+      "severity": "high",
+      "title": "Seed data column 2 contains secret-looking values",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "test/data/POISON-headerless.csv#2",
+        "columnIndex": 2,
+        "kind": "secret",
+        "rowsChecked": 1,
+        "rowsMatching": 1,
+        "impact": "significant",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Remove the real values from the CSV file: replace card numbers and IBANs with clearly synthetic, masked values that fail the format checks (for example `****-****-****-1111`), leave secret columns empty, or drop the column from the seed file altogether. Secrets belong in a service binding or a credential store, never in seed data. Keep `db/data` for configuration data and code lists that must reach production; test data belongs in `test/data`, which CAP loads in development only. If the values are real, treat them as exposed: rotate the secrets and remove the file from the repository history as well, since deleting it in a new commit leaves it in every clone.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/databases/initial-data",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+        "https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/"
+      ],
+      "location": {
+        "file": "test/data/POISON-headerless.csv"
       }
     },
     {
@@ -334,7 +363,7 @@
         "subject": "auditlog",
         "auditLogKind": null,
         "auditLogConfigured": false,
-        "modules": 3,
+        "modules": 4,
         "resources": 3,
         "impact": "moderate",
         "easeOfAttack": "advanced"
@@ -760,7 +789,7 @@
     {
       "id": "SEED_DATA_SENSITIVE",
       "title": "Seed data contains card numbers, IBANs or secrets",
-      "description": "A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets. Seed data is deployed to every system and committed with the project.",
+      "description": "A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets (reported by column position, never by name). Seed data is deployed to every system and committed with the project.",
       "roles": [],
       "owasp": [
         "A04:2025"
@@ -781,10 +810,10 @@
   "summary": {
     "apps": 0,
     "projects": 1,
-    "findings": 16,
+    "findings": 17,
     "findingsBySeverity": {
       "critical": 2,
-      "high": 1,
+      "high": 2,
       "medium": 9,
       "low": 4,
       "info": 0

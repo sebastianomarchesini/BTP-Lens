@@ -117,6 +117,14 @@ describe('parseJson / parseYaml', () => {
     expect(parseYaml('a: 1\na: 2\n')).toEqual({ a: 2 });
   });
 
+  it('applies merge keys (<<) and plain aliases', () => {
+    expect(parseYaml('base: &b { x: 1, y: 2 }\nm:\n  <<: *b\n  y: 3\nn: *b\n')).toEqual({
+      base: { x: 1, y: 2 },
+      m: { x: 1, y: 3 },
+      n: { x: 1, y: 2 },
+    });
+  });
+
   it('never throws, whatever the input', () => {
     for (const text of ['', '\0', '---\n- - - [', '{', '!!js/function "x"', '&a [*a]']) {
       expect(() => parseYaml(text)).not.toThrow();

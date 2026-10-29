@@ -26,6 +26,33 @@ export interface CdsSourceValue {
 
 const PROFILE_KEY = /^\[([A-Za-z0-9_-]+)(!?)\]$/;
 
+/**
+ * Objects nested deeper than this are dropped by the merge and the profile
+ * resolution, and a source that deep is rejected before either runs: both
+ * recurse one level per object, and a planted configuration thousands of
+ * levels deep would otherwise exhaust the stack. Real cds configuration is a
+ * handful of levels deep.
+ */
+export const MAX_CONFIG_DEPTH = 32;
+
+/** Whether a value nests objects or arrays deeper than `max` levels (iterative). */
+export function exceedsConfigDepth(value: unknown, max = MAX_CONFIG_DEPTH): boolean {
+  const pending: { value: unknown; depth: number }[] = [{ value, depth: 0 }];
+  while (pending.length > 0) {
+    const item = pending.pop();
+    if (item === undefined) break;
+    const children = Array.isArray(item.value)
+      ? item.value
+      : isPlainObject(item.value)
+        ? Object.values(item.value)
+        : [];
+    if (children.length === 0) continue;
+    if (item.depth >= max) return true;
+    for (const child of children) pending.push({ value: child, depth: item.depth + 1 });
+  }
+  return false;
+}
+
 /** Keys that would change the prototype of the merged object are dropped. */
 function isSafeKey(key: string): boolean {
   return key !== '__proto__' && key !== 'constructor' && key !== 'prototype';
@@ -35,10 +62,12 @@ function isSafeKey(key: string): boolean {
  * Objects merge key by key; arrays and primitives replace. A string under
  * `requires` is the cds shorthand for `{ kind }`, so a string and an object
  * merge as objects (`auth: 'mocked'` plus `auth: { users }` keeps the kind).
+ * Beyond MAX_CONFIG_DEPTH levels the subtree is dropped.
  */
-export function deepMerge(base: unknown, override: unknown): unknown {
+export function deepMerge(base: unknown, override: unknown, depth = 0): unknown {
+  if (depth >= MAX_CONFIG_DEPTH) return undefined;
   if (typeof base === 'string' && isPlainObject(override)) {
-    return deepMerge({ kind: base }, override);
+    return deepMerge({ kind: base }, override, depth);
   }
   if (isPlainObject(base) && typeof override === 'string') {
     return { ...base, kind: override };
@@ -48,7 +77,7 @@ export function deepMerge(base: unknown, override: unknown): unknown {
   for (const [key, value] of Object.entries(base)) if (isSafeKey(key)) result[key] = value;
   for (const [key, value] of Object.entries(override)) {
     if (!isSafeKey(key)) continue;
-    result[key] = key in result ? deepMerge(result[key], value) : value;
+    result[key] = key in result ? deepMerge(result[key], value, depth + 1) : value;
   }
   return result;
 }
@@ -64,10 +93,12 @@ export function mergeCdsSources(sources: CdsSourceValue[]): unknown {
 /**
  * Applies the profile blocks of one profile recursively: at every object
  * level the plain keys come first, then `[profile]`, then `[profile!]`;
- * blocks of other profiles are dropped.
+ * blocks of other profiles are dropped, as are objects nested beyond
+ * MAX_CONFIG_DEPTH.
  */
-export function resolveProfile(value: unknown, profile: CdsProfile): unknown {
+export function resolveProfile(value: unknown, profile: CdsProfile, depth = 0): unknown {
   if (!isPlainObject(value)) return value;
+  if (depth >= MAX_CONFIG_DEPTH) return undefined;
   let result: Record<string, unknown> = {};
   const blocks: unknown[] = [];
   const importantBlocks: unknown[] = [];
@@ -75,13 +106,14 @@ export function resolveProfile(value: unknown, profile: CdsProfile): unknown {
     if (!isSafeKey(key)) continue;
     const match = PROFILE_KEY.exec(key);
     if (match === null) {
-      result[key] = resolveProfile(child, profile);
+      const resolved = resolveProfile(child, profile, depth + 1);
+      if (resolved !== undefined) result[key] = resolved;
     } else if (match[1] === profile) {
       (match[2] === '!' ? importantBlocks : blocks).push(child);
     }
   }
   for (const block of [...blocks, ...importantBlocks]) {
-    const merged = deepMerge(result, resolveProfile(block, profile));
+    const merged = deepMerge(result, resolveProfile(block, profile, depth + 1), depth);
     result = isPlainObject(merged) ? merged : result;
   }
   return result;

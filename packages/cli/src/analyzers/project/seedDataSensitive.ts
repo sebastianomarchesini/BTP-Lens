@@ -6,16 +6,24 @@ import { type MatrixSeverity, projectFinding } from './support.js';
 
 export const RULE_ID = 'SEED_DATA_SENSITIVE';
 
-/** The subject is `<file>#<column>`: a column name alone is not unique across seed files. */
+/**
+ * The subject is `<file>#<columnIndex>` (1-based): the collector keeps the
+ * position of a sensitive column, never its name, since a header-less file
+ * could put a cell value where the name is expected.
+ */
 export const SUBJECT_SEPARATOR = '#';
 
 const SEVERITY: MatrixSeverity = { impact: 'significant', easeOfAttack: 'advanced' };
 
 const TITLES: Record<SeedSensitiveKind, string> = {
-  card: 'Seed data contains payment card numbers',
-  iban: 'Seed data contains IBANs',
-  secret: 'Seed data contains secrets',
+  card: 'contains payment card numbers',
+  iban: 'contains IBANs',
+  secret: 'contains secret-looking values',
 };
+
+function titleOf(column: RawSeedSensitiveColumn): string {
+  return `Seed data column ${column.columnIndex} ${TITLES[column.kind]}`;
+}
 
 const REMEDIATION =
   'Remove the real values from the CSV file: replace card numbers and IBANs with clearly synthetic, ' +
@@ -46,8 +54,8 @@ function compareText(a: string, b: string): number {
   return a < b ? -1 : 1;
 }
 
-export function seedSubject(file: string, column: string): string {
-  return `${file}${SUBJECT_SEPARATOR}${column}`;
+export function seedSubject(file: string, columnIndex: number): string {
+  return `${file}${SUBJECT_SEPARATOR}${columnIndex}`;
 }
 
 /*
@@ -65,34 +73,35 @@ function outranks(candidate: SensitiveSeed, known: SensitiveSeed): boolean {
 }
 
 /*
- * One entry per (file, column) with at least one matching value. A header
- * that repeats a column name yields two collector entries for one subject;
- * the one that `outranks` the other is kept, so the evidence states the worst case.
+ * One entry per (file, column position) with at least one matching value. A
+ * snapshot that lists one subject twice (e.g. edited by hand) yields two
+ * entries; the one that `outranks` the other is kept, so the evidence states
+ * the worst case.
  */
 function sensitiveSeeds(project: RawProject): SensitiveSeed[] {
   const bySubject = new Map<string, SensitiveSeed>();
   for (const seed of project.seedData) {
     for (const column of seed.sensitiveColumns) {
       if (column.rowsMatching === 0) continue;
-      const subject = seedSubject(seed.file, column.column);
+      const subject = seedSubject(seed.file, column.columnIndex);
       const candidate = { subject, file: seed.file, column, rowsChecked: seed.rowsChecked };
       const known = bySubject.get(subject);
       if (known === undefined || outranks(candidate, known)) bySubject.set(subject, candidate);
     }
   }
   return [...bySubject.values()].sort(
-    (a, b) => compareText(a.file, b.file) || compareText(a.column.column, b.column.column),
+    (a, b) => compareText(a.file, b.file) || a.column.columnIndex - b.column.columnIndex,
   );
 }
 
 function findingFor(context: AnalyzerContext, project: RawProject, seed: SensitiveSeed): Finding {
   return projectFinding(context, project, {
     id: RULE_ID,
-    title: TITLES[seed.column.kind],
+    title: titleOf(seed.column),
     subject: seed.subject,
     severity: SEVERITY,
     evidence: {
-      column: seed.column.column,
+      columnIndex: seed.column.columnIndex,
       kind: seed.column.kind,
       rowsChecked: seed.rowsChecked,
       rowsMatching: seed.column.rowsMatching,
@@ -114,7 +123,7 @@ export const seedDataSensitive: Analyzer = {
     id: RULE_ID,
     title: 'Seed data contains card numbers, IBANs or secrets',
     description:
-      'A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets. Seed data is deployed to every system and committed with the project.',
+      'A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets (reported by column position, never by name). Seed data is deployed to every system and committed with the project.',
     roles: [],
     owasp: ['A04:2025'],
     helpUri: ruleHelpUri(RULE_ID),

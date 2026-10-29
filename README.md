@@ -87,7 +87,7 @@ btp-lens version
 - With no arguments on a terminal, guided mode starts; in a script it prints usage and exits 2.
 - `project` scans a local CAP or MTA project folder for the thirteen configuration and model rules in [docs/rules.md](docs/rules.md#project-rules) (mocked authentication in production, unrestricted services, missing audit logging, open approuter routes, seed data with card numbers, and more), each tagged with its OWASP Top 10 (2025) category. It reads files only: no login, no network, no child process, and it never opens `.env`, `.cdsrc-private.json`, `default-env.json`, keys or `*.mtaext` files.
 - Guided mode signs in the way `cf login --sso` does (one-time code from your company login) or with username and password, keeps the session in memory only, and writes to `./btp-lens-reports/<date-time>/`.
-- `scan` writes one snapshot (`snapshot-<time>.json`) and the requested reports.
+- `scan` and `project` write one snapshot (`snapshot-<time>.json`) and the requested reports.
 - `report --from` re-runs every rule on a snapshot **offline**, for example after you upgrade BTP Lens.
 - Exit codes:
   - `0`: no findings at or above `--fail-on` (the default, `none`, never fails).

@@ -44,6 +44,11 @@ modules:
       buildpack: nodejs_buildpack
     requires:
       - name: acme-incidents-db
+  - name: acme-incidents-local
+    type: nodejs
+    path: tools
+    parameters:
+      buildpack: /home/poison-user/POISON_bp_path/nodejs
 resources:
   - name: acme-incidents-auth
     type: org.cloudfoundry.managed-service

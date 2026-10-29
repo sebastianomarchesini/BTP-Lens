@@ -105,7 +105,7 @@ describe('project test factory', () => {
       ],
       seedData: [
         seedCsv('db/data/Customers.csv', {
-          sensitiveColumns: [{ column: 'creditCardNo', kind: 'card', rowsMatching: 2 }],
+          sensitiveColumns: [{ columnIndex: 6, kind: 'card', rowsMatching: 2 }],
         }),
       ],
       archives: [archive('mta_archives/acme.mtar', { bytes: 64 })],

@@ -58,8 +58,8 @@ export function parseJson(text: string): unknown {
 
 /**
  * YAML with alias expansion bounded (billion laughs), duplicate keys
- * tolerated (last wins, as the cds and mta tools do) and no source lines in
- * errors. With `logLevel: 'silent'` the parser collects syntax errors instead
+ * tolerated (last wins, as the cds and mta tools do), merge keys (`<<`)
+ * applied as the MTA build tool does, and no source lines in errors. With `logLevel: 'silent'` the parser collects syntax errors instead
  * of throwing them; a document with any is rejected as a whole, and the
  * errors themselves (which quote the source) are dropped.
  */
@@ -69,6 +69,7 @@ export function parseYaml(text: string): unknown {
       prettyErrors: false,
       logLevel: 'silent',
       uniqueKeys: false,
+      merge: true,
     });
     if (document.errors.length > 0) return undefined;
     return document.toJS({ maxAliasCount: 100 }) as unknown;

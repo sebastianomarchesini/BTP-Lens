@@ -189,6 +189,49 @@ resources:
     expect(buildpackOf('nodejs_buildpack')).toBe('nodejs_buildpack');
     expect(buildpackOf('')).toBeNull();
     expect(buildpackOf(`https://h.example.com/${'a'.repeat(300)}`)).toHaveLength(200);
+  });
+
+  it('keeps a buildpack name or an http(s)/git URL without credentials; never a local path', () => {
+    expect(buildpackOf('sap_java_buildpack_jakarta')).toBe('sap_java_buildpack_jakarta');
+    expect(buildpackOf('nodejs-buildpack-v1.8.40')).toBe('nodejs-buildpack-v1.8.40');
+    expect(buildpackOf('git://u:p@github.com/acme/bp.git?ref=POISON_ref#x')).toBe(
+      'git://github.com/acme/bp.git',
+    );
+    expect(buildpackOf('git+https://github.com/acme/bp.git')).toBe(
+      'git+https://github.com/acme/bp.git',
+    );
+    expect(buildpackOf('/home/poison-user/POISON_bp_path/nodejs')).toBeNull();
+    expect(buildpackOf('C:\\Users\\poison-user\\buildpacks')).toBeNull();
+    expect(buildpackOf('../POISON_bp_path')).toBeNull();
+    expect(buildpackOf('file:///home/poison-user/bp')).toBeNull();
+    expect(buildpackOf('ssh://git@github.com/acme/bp.git')).toBeNull();
+    expect(buildpackOf('a'.repeat(101))).toBeNull();
+    expect(buildpackOf('name with space')).toBeNull();
+    expect(buildpackOf(42)).toBeNull();
+  });
+
+  it('applies YAML merge keys, as the MTA build tool does', () => {
+    const result = parseMta(
+      [
+        '_defs:',
+        '  base: &base',
+        '    type: nodejs',
+        '    path: srv',
+        '    parameters:',
+        '      buildpack: nodejs_buildpack',
+        'modules:',
+        '  - name: srv',
+        '    <<: *base',
+        '  - name: ui',
+        '    <<: *base',
+        '    type: html5',
+      ].join('\n'),
+      'mta.yaml',
+    );
+    expect(result?.mta.modules).toEqual([
+      { name: 'srv', type: 'nodejs', path: 'srv', buildpack: 'nodejs_buildpack', requires: [] },
+      { name: 'ui', type: 'html5', path: 'srv', buildpack: 'nodejs_buildpack', requires: [] },
+    ]);
     expect(modulePathOf('./srv')).toBe('srv');
     expect(modulePathOf('/abs/srv')).toBeNull();
     expect(modulePathOf('../up')).toBeNull();

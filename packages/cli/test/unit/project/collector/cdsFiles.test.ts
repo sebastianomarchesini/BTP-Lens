@@ -205,6 +205,40 @@ service G { @readonly entity Y as projection on Z; entity W as projection on Z; 
       { name: 'unbound', line: 7, requires: [], restrictTo: [] },
     ]);
   });
+
+  it('reads the Fiori-tools `using X as service from` line as an alias, not a service', () => {
+    const file = scan(`using ProcessorService as service from '../../srv/services';
+using from '../../db/schema';
+using { acme.incidents as entity } from '../../db/schema';
+
+annotate service.Incidents with @(UI.HeaderInfo: { TypeName: 'POISON_title' });
+annotate service.Incidents with @(restrict: [{ grant: 'READ', to: 'auditor' }]);
+annotate service with @(requires: 'admin');
+`);
+    expect(file.usings).toEqual([
+      { alias: 'service', target: 'ProcessorService' },
+      { alias: 'entity', target: 'acme.incidents' },
+    ]);
+    expect(file.services).toEqual([]);
+    expect(file.entities).toEqual([]);
+    expect(file.annotates.map((a) => [a.target, a.line, a.requires, a.restrictTo])).toEqual([
+      ['service.Incidents', 5, [], []],
+      ['service.Incidents', 6, [], ['auditor']],
+      ['service', 7, ['admin'], []],
+    ]);
+    expect(JSON.stringify(file)).not.toContain('POISON');
+  });
+
+  it('still ends a statement without `;` at the next keyword', () => {
+    const file = scan(`using db.Books as Titles from '../db/schema'
+service S { entity Titles as projection on Titles }
+entity E { key ID : UUID; }`);
+    expect(file.usings).toEqual([{ alias: 'Titles', target: 'db.Books' }]);
+    expect(file.services.map((s) => [s.name, s.entities.map((e) => e.name)])).toEqual([
+      ['S', ['Titles']],
+    ]);
+    expect(file.entities.map((e) => e.name)).toEqual(['E']);
+  });
 });
 
 describe('scanCds: model entities', () => {
@@ -368,6 +402,35 @@ service Real {}
     expect(() => scan(`service S ${nested}`)).not.toThrow();
     expect(() => scan(`entity E ${nested}`)).not.toThrow();
     expect(() => scan(`${repeated}${nested}`)).not.toThrow();
-    expect(Date.now() - started).toBeLessThan(2_000);
-  }, 10_000);
+    // Sub-second on a developer machine; a super-linear regression takes minutes, so a
+    // wide budget keeps a slow, fully loaded CI runner out of the noise band.
+    expect(Date.now() - started).toBeLessThan(10_000);
+  }, 30_000);
+
+  it('scans a generated model of 20 000 entities in time linear to its size', () => {
+    // A `cds import` model: many entities, each with a few annotated elements.
+    const entities = Array.from(
+      { length: 20_000 },
+      (_, i) => `@cds.persistence.skip
+entity E${i} {
+  key ID : UUID;
+  @title: 'Name' name : String(100);
+  city : String(100);
+  owner : Association to E${i};
+}`,
+    );
+    const text = entities.join('\n');
+    expect(text.length).toBeGreaterThan(1_400_000);
+    const started = Date.now();
+    const file = scan(text);
+    const elapsed = Date.now() - started;
+    expect(file.entities).toHaveLength(CDS_LIMITS.entities);
+    expect(file.entities[CDS_LIMITS.entities - 1]).toMatchObject({
+      fields: ['ID', 'name', 'city', 'owner'],
+      associations: [{ field: 'owner', target: `E${CDS_LIMITS.entities - 1}` }],
+    });
+    // Well under 2 s on a developer machine; the budget only guards against a regression
+    // back to a scan that rereads the file once per definition (80 s for this input).
+    expect(elapsed).toBeLessThan(20_000);
+  }, 60_000);
 });

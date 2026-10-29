@@ -42,7 +42,7 @@ describe('bootstrap detection', () => {
       {
         file: 'app/webapp/index.html',
         line: 8,
-        src: 'resources/sap-ui-core.js',
+        src: 'sap-ui-core.js',
         external: false,
         integrity: false,
         versionForm: 'none',
@@ -68,7 +68,7 @@ describe('bootstrap detection', () => {
       external: true,
     });
     expect(safeSrc('../resources/sap-ui-core.js?v=POISON#x')).toEqual({
-      src: '../resources/sap-ui-core.js',
+      src: 'sap-ui-core.js',
       external: false,
     });
     expect(safeSrc('data:text/javascript,POISON')).toEqual({ src: NON_HTTP_SRC, external: false });
@@ -82,6 +82,26 @@ describe('bootstrap detection', () => {
       external: false,
     });
     expect(safeSrc(`https://h.example.com/${'a'.repeat(300)}`).src).toHaveLength(200);
+  });
+
+  it('keeps only the file name of a relative src: never an absolute or climbing path', () => {
+    for (const src of [
+      'resources/sap-ui-core.js',
+      './resources/sap-ui-core.js',
+      '../../resources/sap-ui-core.js',
+      '/home/poison-user/local-ui5/resources/sap-ui-core.js',
+      '../../../../../../etc/passwd-poison/resources/sap-ui-core.js',
+    ]) {
+      expect(safeSrc(src), src).toEqual({ src: 'sap-ui-core.js', external: false });
+    }
+    // A drive letter reads as a scheme: the marker, never the path.
+    expect(safeSrc('C:\\Users\\poison-user\\sap-ui-core.js')).toEqual({
+      src: NON_HTTP_SRC,
+      external: false,
+    });
+    expect(safeSrc('')).toEqual({ src: '', external: false });
+    expect(safeSrc('resources/')).toEqual({ src: '', external: false });
+    expect(safeSrc(`${'a'.repeat(300)}.js`).src).toHaveLength(200);
   });
 
   it('classifies the version form and test pages', () => {
@@ -107,7 +127,7 @@ describe('bootstrap detection', () => {
       {
         file: 'index.html',
         line: 1,
-        src: 'resources/sap-ui-core.js',
+        src: 'sap-ui-core.js',
         external: false,
         integrity: true,
         versionForm: 'none',
@@ -119,13 +139,29 @@ describe('bootstrap detection', () => {
     expect(scanHtml('', 'a.html')).toEqual([]);
   });
 
-  it('finishes hostile input quickly and caps the number of tags', () => {
+  it('finds a bootstrap however many other script tags precede it', () => {
+    const bootstrap =
+      '<script id="sap-ui-bootstrap" src="https://ui5.example.com/resources/sap-ui-core.js"></script>';
+    for (const n of [199, 200, 201, 250]) {
+      const html = `${'<script></script>\n'.repeat(n)}${bootstrap}`;
+      expect(
+        scanHtml(html, 'a.html').map((b) => b.line),
+        `${n} tags`,
+      ).toEqual([n + 1]);
+    }
+  });
+
+  it('finishes hostile input quickly and caps the number of bootstraps, not of tags', () => {
     const started = Date.now();
     const many = '<script src="x/sap-ui-core.js">'.repeat(5_000);
-    expect(scanHtml(many, 'a.html').length).toBeLessThanOrEqual(200);
+    expect(scanHtml(many, 'a.html')).toHaveLength(200);
+    const mixed = '<script></script><script src="x/sap-ui-core.js">'.repeat(5_000);
+    expect(scanHtml(mixed, 'a.html')).toHaveLength(200);
     const unclosed = `<script id="sap-ui-bootstrap" src="${'a'.repeat(1_000_000)}`;
     expect(scanHtml(unclosed, 'a.html')).toHaveLength(1);
     expect(scanHtml('<script '.repeat(100_000), 'a.html')).toEqual([]);
-    expect(Date.now() - started).toBeLessThan(2_000);
-  });
+    // Sub-second on a developer machine; a super-linear regression takes minutes, so a
+    // wide budget keeps a slow, fully loaded CI runner out of the noise band.
+    expect(Date.now() - started).toBeLessThan(10_000);
+  }, 30_000);
 });

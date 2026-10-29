@@ -1,6 +1,6 @@
 import { mkdtemp, readFile, readdir, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { basename, join, resolve, sep } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type * as ChildProcess from 'node:child_process';
 import type * as HtmlReporter from '../../src/reporters/html.js';
@@ -197,6 +197,7 @@ describe('btp-lens project on the acme-incidents fixture', () => {
     expect(project.files).toEqual([
       '.cdsrc.json',
       '.cdsrc.yaml',
+      'app/incidents/annotations.cds',
       'app/incidents/webapp/index.html',
       'app/incidents/webapp/test/flpSandbox.html',
       'app/incidents/xs-app.json',
@@ -209,8 +210,10 @@ describe('btp-lens project on the acme-incidents fixture', () => {
       'srv/external/ExternalService.cds',
       'srv/services.cds',
       'test/data/POISON-export.csv',
+      'test/data/POISON-headerless.csv',
       'xs-security.json',
     ]);
+    expect(project.filesOpened).toBe(project.files.length + project.unreadable.length);
     expect(project.archives).toEqual([
       { file: 'mta_archives/acme-incidents_1.0.0.mtar', bytes: 64, ignored: false },
     ]);
@@ -233,15 +236,22 @@ describe('btp-lens project on the acme-incidents fixture', () => {
     expect(snapshot.checks.find((check) => check.id === 'collect.project')?.status).toBe('ran');
   });
 
-  it('(6) stores bootstrap sources without query, fragment or userinfo', () => {
-    expect(project.html).toHaveLength(3);
+  it('(6) stores bootstrap sources without query, fragment, userinfo or a relative path', () => {
+    expect(project.html).toHaveLength(5);
     for (const bootstrap of project.html) expect(bootstrap.src).not.toMatch(/[?#@]/);
     expect(
       project.html.map((h) => [h.file, h.versionForm, h.external, h.integrity, h.testPage]),
     ).toEqual([
       ['app/incidents/webapp/index.html', 'latest', true, false, false],
+      ['app/incidents/webapp/index.html', 'none', false, false, false],
+      ['app/incidents/webapp/index.html', 'none', false, false, false],
       ['app/incidents/webapp/test/flpSandbox.html', 'specific', true, false, true],
       ['app/launchpage.html', 'evergreen', true, false, false],
+    ]);
+    // The absolute and the climbing src of the fixture keep their file name only.
+    expect(project.html.filter((h) => !h.external).map((h) => h.src)).toEqual([
+      'sap-ui-core.js',
+      'sap-ui-core.js',
     ]);
   });
 
@@ -262,11 +272,13 @@ describe('btp-lens project on the acme-incidents fixture', () => {
   it('(9) reports exactly the findings the fixture was designed to trigger', () => {
     // Every project rule fires at least once; Warehouses, Incidents, ProcessorService,
     // InternalService, ExternalService, the ui5/MTX/logout routes, $XSAPPNAME.callback
-    // and the header-less test/data export stay silent (docs/rules.md).
+    // and the header-less test/data export stay silent (docs/rules.md). The header-less
+    // file whose first row looks like a header fires by column position, never by name.
     expect(snapshot.findings.map((f) => [f.id, f.severity, f.evidence.subject])).toEqual([
       ['CAP_MOCKED_AUTH_IN_PROD', 'critical', 'requires.auth'],
       ['CAP_SERVICE_NO_RESTRICTION', 'critical', 'AdminService'],
-      ['SEED_DATA_SENSITIVE', 'high', 'db/data/acme.incidents-Customers.csv#creditCardNo'],
+      ['SEED_DATA_SENSITIVE', 'high', 'db/data/acme.incidents-Customers.csv#6'],
+      ['SEED_DATA_SENSITIVE', 'high', 'test/data/POISON-headerless.csv#2'],
       ['APPROUTER_CSRF_DISABLED', 'medium', '^/odata/(.*)$'],
       ['APPROUTER_ROUTE_NO_AUTH', 'medium', '^/public/(.*)$'],
       ['CAP_AUDITLOG_MISSING', 'medium', 'requires.audit-log'],
@@ -371,6 +383,7 @@ describe('btp-lens project on the acme-incidents fixture', () => {
       'nodejs_buildpack',
       'https://github.com/acme/buildpack.git',
       'nodejs_buildpack',
+      null,
     ]);
     expect(project.mta?.resources.map((r) => r.service)).toEqual(['xsuaa', 'hana', 'destination']);
     expect(project.xsSecurity.map((x) => [x.file, x.source])).toEqual([
@@ -413,10 +426,15 @@ describe('btp-lens project on the acme-incidents fixture', () => {
       [
         'db/data/acme.incidents-Customers.csv',
         false,
-        [{ column: 'creditCardNo', kind: 'card', rowsMatching: 1 }],
+        [{ columnIndex: 6, kind: 'card', rowsMatching: 1 }],
       ],
       ['db/data/acme.incidents-Status.csv', false, []],
       ['test/data/POISON-export.csv', true, []],
+      [
+        'test/data/POISON-headerless.csv',
+        false,
+        [{ columnIndex: 2, kind: 'secret', rowsMatching: 1 }],
+      ],
     ]);
   });
 });
@@ -442,9 +460,12 @@ describe('btp-lens project on the clean-cap fixture', () => {
 describe('btp-lens project root errors', () => {
   it('(13) exits 2 and echoes the --path the user gave, never its real path', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'btp-lens-project-roots-'));
+    // The directory link targets a second temp directory with its own unique name, so
+    // that its real path is not a prefix of the --path the error legitimately echoes.
+    const real = await mkdtemp(join(tmpdir(), 'btp-lens-project-real-'));
     await writeFile(join(dir, 'real-file.txt'), 'x');
     await symlink(join(dir, 'real-file.txt'), join(dir, 'file-link'));
-    await symlink(dir, join(dir, 'dir-link'));
+    await symlink(real, join(dir, 'dir-link'));
     const cases: [string, string][] = [
       [join(dir, 'file-link'), 'is not a folder'],
       [join(dir, 'missing'), 'does not exist'],
@@ -456,7 +477,7 @@ describe('btp-lens project root errors', () => {
       expect(code, path).toBe(EXIT.error);
       expect(c.err()).toContain(`Project path "${path}" ${reason}`);
       expect(c.err()).not.toContain('real-file');
-      expect(c.err()).not.toContain('btp-lens-project-roots-/');
+      expect(c.err()).not.toContain(basename(real));
       expect(c.out()).toBe('');
     }
   });

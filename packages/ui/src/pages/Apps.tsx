@@ -150,6 +150,10 @@ export function Apps() {
         groupBy={grouping}
         scaleWidthMode="Smart"
         visibleRows={Math.min(data.apps.length, 15)}
+        // At phone width Org, Space and Last deploy pop into the first column and a row
+        // grows to several lines; without this the body keeps its 44px-per-row height
+        // and a one-row (project) table clips everything but the name.
+        adjustTableHeightOnPopIn
         onRowClick={(event) => {
           const app = event.detail.row.original as AppInventoryItem | undefined;
           if (app?.guid) void navigate(`/findings?app=${encodeURIComponent(app.guid)}`);

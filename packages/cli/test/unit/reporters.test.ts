@@ -13,6 +13,7 @@ import { projectFinding } from '../../src/analyzers/project/support.js';
 import { SNAPSHOT_SCHEMA_VERSION, type Snapshot } from '../../src/model/snapshot.js';
 import { ACME, acmeFetch } from '../support/acme.js';
 import { NOW, PROJECT_COLLECTOR, rawData, rawProject } from '../support/project.js';
+import { materializeFixture } from '../support/projectFixture.js';
 
 async function acmeReport() {
   const snapshot = await scan({
@@ -242,7 +243,15 @@ describe('SARIF report', () => {
   });
 
   it('uses a project pseudo-path when a project finding has no file', async () => {
-    const snapshot = await scanProject({ path: process.cwd(), now: () => new Date(NOW) });
+    // A materialized fixture, not process.cwd(): the test must not depend on the
+    // working directory vitest runs from, nor on whatever lies in the package tree.
+    const fixture = await materializeFixture('clean-cap');
+    let snapshot: Snapshot;
+    try {
+      snapshot = await scanProject({ path: fixture.root, now: () => new Date(NOW) });
+    } finally {
+      await fixture.cleanup();
+    }
     const data = toReportData(snapshot);
     data.findings.push({
       id: 'TEST_RULE',
@@ -261,11 +270,11 @@ describe('SARIF report', () => {
         }[];
       }[];
     };
-    // The real collector names the project after package.json (btp-lens), not the folder.
-    expect(snapshot.scope.projects).toEqual(['btp-lens']);
-    // The scan of this package yields real findings with files; only the pushed one has none.
+    // The real collector names the project after package.json (clean-cap), not the
+    // temporary folder it was materialized into.
+    expect(snapshot.scope.projects).toEqual(['clean-cap']);
     const result = sarif.runs[0]?.results.find((r) => r.ruleId === 'TEST_RULE');
-    expect(result?.locations[0]?.physicalLocation.artifactLocation.uri).toBe('project/btp-lens');
+    expect(result?.locations[0]?.physicalLocation.artifactLocation.uri).toBe('project/clean-cap');
   });
 });
 

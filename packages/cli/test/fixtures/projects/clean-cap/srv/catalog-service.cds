@@ -15,3 +15,8 @@ service CatalogService @(requires: 'authenticated-user') {
   @(requires: 'admin')
   action recalculatePrices();
 }
+
+/** Restricted only through app/catalog/annotations.cds (`using BrowseService as service`). */
+service BrowseService {
+  @readonly entity Products as projection on db.Products;
+}

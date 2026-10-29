@@ -1,5 +1,5 @@
 import { lstat, realpath, stat } from 'node:fs/promises';
-import { basename, resolve } from 'node:path';
+import { basename, dirname, relative, resolve, sep } from 'node:path';
 import { ConfigError } from '../../http/errors.js';
 import {
   type CdsSource,
@@ -11,7 +11,12 @@ import {
   type UnreadableKind,
 } from '../../model/raw.js';
 import { scanCds } from './cdsFiles.js';
-import { type CdsSourceValue, effectiveCdsViews } from './cdsConfig.js';
+import {
+  type CdsProfile,
+  type CdsSourceValue,
+  effectiveCdsViews,
+  exceedsConfigDepth,
+} from './cdsConfig.js';
 import { type GitignoreLayer, isIgnored, parseGitignore } from './gitignore.js';
 import { scanHtml } from './html.js';
 import { parseMta } from './mta.js';
@@ -28,7 +33,10 @@ import { parseXsSecurity } from './xsSecurity.js';
  * error escapes. Each file that cannot be read or parsed becomes an
  * `unreadable` entry with a reason code, so that neither a path nor file
  * content can reach a check reason, the terminal or a report
- * (docs/data-sources.md, "Local project files").
+ * (docs/data-sources.md, "Local project files"). Outside the root only a
+ * `.git` entry is looked for (lstat) and the `.gitignore` files between the
+ * repository root and the project root are read for their archive decision;
+ * nothing about them is stored.
  */
 
 export interface CollectProjectOptions {
@@ -40,6 +48,8 @@ export const DEFAULT_PROJECT_ID = 'project';
 export const MAX_FILES_OPENED = 2000;
 export const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
 export const MAX_FILES_LISTED = 500;
+/** Ancestors of the root checked for a `.git` entry. */
+export const MAX_ANCESTORS = 64;
 const MAX_UNREADABLE = 200;
 const LIST_CAPS = {
   xsSecurity: 100,
@@ -234,8 +244,69 @@ class Collection {
   }
 }
 
-function objectOrNull(value: unknown): Record<string, unknown> | null {
-  return isPlainObject(value) ? value : null;
+/** A cds configuration source: a plain object nested at most MAX_CONFIG_DEPTH levels deep. */
+function configOrNull(value: unknown): Record<string, unknown> | null {
+  return isPlainObject(value) && !exceedsConfigDepth(value) ? value : null;
+}
+
+/** The nearest directory, from the root upwards, with a `.git` entry (lstat only); null when none. */
+async function findRepositoryRoot(root: string): Promise<string | null> {
+  let dir = root;
+  for (let level = 0; level < MAX_ANCESTORS; level += 1) {
+    if (await exists(resolve(dir, '.git'))) return dir;
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/** The project root relative to the repository root, `/`-separated; `''` when they coincide. */
+function ancestorPrefix(repositoryRoot: string, root: string): string {
+  return relative(repositoryRoot, root).split(sep).join('/');
+}
+
+function joinRelative(prefix: string, path: string): string {
+  if (prefix === '') return path;
+  return path === '' ? prefix : `${prefix}/${path}`;
+}
+
+/**
+ * The .gitignore layers of the directories from the repository root down to
+ * the parent of the project root, with bases relative to the repository
+ * root. They lie outside the project, so they are read directly: never
+ * listed, counted or recorded as unreadable, and only their decision about
+ * an archive is kept.
+ */
+async function ancestorGitignoreLayers(
+  repositoryRoot: string,
+  prefix: string,
+): Promise<GitignoreLayer[]> {
+  const layers: GitignoreLayer[] = [];
+  if (prefix === '') return layers;
+  const segments = prefix.split('/');
+  for (let depth = 0; depth < segments.length; depth += 1) {
+    const dirs = segments.slice(0, depth);
+    const result = await readProjectFile(resolve(repositoryRoot, ...dirs, '.gitignore'));
+    if (result.ok) layers.push({ base: dirs.join('/'), rules: parseGitignore(result.text) });
+  }
+  return layers;
+}
+
+/** The effective cds views; a defence against anything the merge might throw (nothing escapes). */
+function cdsViewsOf(
+  sources: CdsSourceValue[],
+  collection: Collection,
+): Record<CdsProfile, CdsView> {
+  try {
+    return effectiveCdsViews(sources);
+  } catch {
+    for (const { source } of sources) {
+      collection.markUnreadable(source, source === '.cdsrc.yaml' ? 'yaml' : 'json');
+    }
+    sources.splice(0);
+    return { development: emptyCdsView(), production: emptyCdsView() };
+  }
 }
 
 /** mta ID, else the package name without scope, else the directory name, else `project`. */
@@ -252,19 +323,22 @@ function projectId(root: string, collection: Collection): string {
 async function collectEntry(entry: WalkedFile, collection: Collection): Promise<void> {
   switch (entry.kind) {
     case 'package.json': {
-      const result = await collection.collect(entry, parsePackageJson);
+      const result = await collection.collect(entry, (text) => {
+        const parsed = parsePackageJson(text);
+        return parsed !== null && exceedsConfigDepth(parsed.cds) ? null : parsed;
+      });
       if (result === null) return;
       collection.packageJson = result.packageJson;
       if (result.cds !== undefined) collection.cdsSources['package.json'] = result.cds;
       return;
     }
     case 'cdsrc.json': {
-      const value = await collection.collect(entry, (text) => objectOrNull(parseJson(text)));
+      const value = await collection.collect(entry, (text) => configOrNull(parseJson(text)));
       if (value !== null) collection.cdsSources['.cdsrc.json'] = value;
       return;
     }
     case 'cdsrc.yaml': {
-      const value = await collection.collect(entry, (text) => objectOrNull(parseYaml(text)));
+      const value = await collection.collect(entry, (text) => configOrNull(parseYaml(text)));
       if (value !== null) collection.cdsSources['.cdsrc.yaml'] = value;
       return;
     }
@@ -338,14 +412,23 @@ export async function collectProject(
   const ordered = [...walk.files.filter(isConfig), ...walk.files.filter((f) => !isConfig(f))];
   for (const entry of ordered) await collectEntry(entry, collection);
 
+  // Archives are matched in the frame of the repository root, so that the
+  // .gitignore files above the project root apply as git would apply them.
+  const repositoryRoot = await findRepositoryRoot(root);
+  const prefix = repositoryRoot === null ? '' : ancestorPrefix(repositoryRoot, root);
+  const aboveLayers =
+    repositoryRoot === null ? [] : await ancestorGitignoreLayers(repositoryRoot, prefix);
   const byRel = new Map(walk.files.map((f) => [f.rel, f] as const));
   for (const entry of walk.files.filter((f) => f.kind === 'mtar')) {
     if (collection.archives.length >= LIST_CAPS.archives) break;
-    const layers = await collection.gitignoreLayers(entry.rel, byRel);
+    const layers = (await collection.gitignoreLayers(entry.rel, byRel)).map((layer) => ({
+      ...layer,
+      base: joinRelative(prefix, layer.base),
+    }));
     collection.archives.push({
       file: entry.rel,
       bytes: entry.size,
-      ignored: isIgnored(layers, entry.rel),
+      ignored: isIgnored([...aboveLayers, ...layers], joinRelative(prefix, entry.rel)),
     });
   }
 
@@ -353,17 +436,19 @@ export async function collectProject(
     .filter((source) => collection.cdsSources[source] !== undefined)
     .map((source) => ({ source, value: collection.cdsSources[source] }));
   const files = [...new Set(collection.files)].sort();
+  const cds = { effective: cdsViewsOf(sources, collection) };
 
   const project: RawProject = {
     id: projectId(root, collection),
     sourcesRead: sources.map((s) => s.source),
     files: files.slice(0, MAX_FILES_LISTED),
     filesTruncated: collection.truncated || files.length > MAX_FILES_LISTED,
+    filesOpened: collection.opened,
     unreadable: [...collection.unreadable].sort((a, b) => (a.file < b.file ? -1 : 1)),
-    repository: await exists(resolve(root, '.git')),
+    repository: repositoryRoot !== null,
     gitIgnore: { present: await isRegularFile(resolve(root, '.gitignore')) },
     packageJson: collection.packageJson,
-    cds: { effective: effectiveCdsViews(sources) },
+    cds,
     mta: collection.mta,
     xsSecurity: collection.xsSecurity.slice(0, LIST_CAPS.xsSecurity),
     xsApps: collection.xsApps.slice(0, LIST_CAPS.xsApps),

@@ -36,12 +36,12 @@ function project(seeds: RawSeedData[], overrides: Partial<RawProject> = {}): Raw
   return rawProject({ seedData: seeds, ...overrides });
 }
 
-/** A customers file whose card column has three Luhn-valid values. */
+/** A customers file whose sixth column (the card number) has three Luhn-valid values. */
 function cardSeed(file = CUSTOMERS, rowsMatching = 3): RawSeedData {
   return seedCsv(file, {
     columnCount: 7,
     rowsChecked: 10,
-    sensitiveColumns: [{ column: 'creditCardNo', kind: 'card', rowsMatching }],
+    sensitiveColumns: [{ columnIndex: 6, kind: 'card', rowsMatching }],
   });
 }
 
@@ -52,7 +52,7 @@ describe('SEED_DATA_SENSITIVE', () => {
   it('declares the rule id and the subject shape', () => {
     expect(RULE_ID).toBe('SEED_DATA_SENSITIVE');
     expect(SUBJECT_SEPARATOR).toBe('#');
-    expect(seedSubject('db/data/a.csv', 'iban')).toBe('db/data/a.csv#iban');
+    expect(seedSubject('db/data/a.csv', 3)).toBe('db/data/a.csv#3');
   });
 
   it('fires high for a card column with matching values', () => {
@@ -61,7 +61,7 @@ describe('SEED_DATA_SENSITIVE', () => {
     const finding = findings[0]!;
     expect(finding.id).toBe(RULE_ID);
     expect(finding.severity).toBe('high');
-    expect(finding.title).toBe('Seed data contains payment card numbers');
+    expect(finding.title).toBe('Seed data column 6 contains payment card numbers');
     expect(finding.app).toEqual({
       guid: 'project:acme',
       name: 'acme',
@@ -69,8 +69,8 @@ describe('SEED_DATA_SENSITIVE', () => {
       org: 'local',
     });
     expect(finding.evidence).toEqual({
-      subject: `${CUSTOMERS}#creditCardNo`,
-      column: 'creditCardNo',
+      subject: `${CUSTOMERS}#6`,
+      columnIndex: 6,
       kind: 'card',
       rowsChecked: 10,
       rowsMatching: 3,
@@ -86,12 +86,12 @@ describe('SEED_DATA_SENSITIVE', () => {
       seedDataSensitive,
       project([
         seedCsv('db/data/Accounts.csv', {
-          sensitiveColumns: [{ column: 'iban', kind: 'iban', rowsMatching: 1 }],
+          sensitiveColumns: [{ columnIndex: 2, kind: 'iban', rowsMatching: 1 }],
         }),
       ]),
     );
-    expect(subjects(findings)).toEqual([['db/data/Accounts.csv#iban', 'high']]);
-    expect(findings[0]!.title).toBe('Seed data contains IBANs');
+    expect(subjects(findings)).toEqual([['db/data/Accounts.csv#2', 'high']]);
+    expect(findings[0]!.title).toBe('Seed data column 2 contains IBANs');
     expect(findings[0]!.evidence).toMatchObject({ kind: 'iban', rowsChecked: 10, rowsMatching: 1 });
   });
 
@@ -101,12 +101,12 @@ describe('SEED_DATA_SENSITIVE', () => {
       project([
         seedCsv('test/data/Users.csv', {
           rowsChecked: 2,
-          sensitiveColumns: [{ column: 'password', kind: 'secret', rowsMatching: 2 }],
+          sensitiveColumns: [{ columnIndex: 3, kind: 'secret', rowsMatching: 2 }],
         }),
       ]),
     );
-    expect(subjects(findings)).toEqual([['test/data/Users.csv#password', 'high']]);
-    expect(findings[0]!.title).toBe('Seed data contains secrets');
+    expect(subjects(findings)).toEqual([['test/data/Users.csv#3', 'high']]);
+    expect(findings[0]!.title).toBe('Seed data column 3 contains secret-looking values');
     expect(findings[0]!.location).toEqual({ file: 'test/data/Users.csv' });
   });
 
@@ -116,7 +116,9 @@ describe('SEED_DATA_SENSITIVE', () => {
       const [finding] = runRule(
         seedDataSensitive,
         project([
-          seedCsv('db/data/X.csv', { sensitiveColumns: [{ column: kind, kind, rowsMatching: 1 }] }),
+          seedCsv('db/data/X.csv', {
+            sensitiveColumns: [{ columnIndex: 1, kind, rowsMatching: 1 }],
+          }),
         ]),
       );
       expect(finding!.severity).toBe('high');
@@ -133,8 +135,8 @@ describe('SEED_DATA_SENSITIVE', () => {
       none([
         seedCsv('db/data/Users.csv', {
           sensitiveColumns: [
-            { column: 'password', kind: 'secret', rowsMatching: 0 },
-            { column: 'iban', kind: 'iban', rowsMatching: 0 },
+            { columnIndex: 2, kind: 'secret', rowsMatching: 0 },
+            { columnIndex: 3, kind: 'iban', rowsMatching: 0 },
           ],
         }),
       ]);
@@ -154,7 +156,7 @@ describe('SEED_DATA_SENSITIVE', () => {
       none([
         seedCsv('db/data/Empty.csv', {
           rowsChecked: 0,
-          sensitiveColumns: [{ column: 'creditCardNo', kind: 'card', rowsMatching: 0 }],
+          sensitiveColumns: [{ columnIndex: 6, kind: 'card', rowsMatching: 0 }],
         }),
       ]);
     });
@@ -167,33 +169,33 @@ describe('SEED_DATA_SENSITIVE', () => {
     });
   });
 
-  it('emits one finding per column of a file, sorted by column name', () => {
+  it('emits one finding per column of a file, sorted by column position', () => {
     const findings = runRule(
       seedDataSensitive,
       project([
         seedCsv(CUSTOMERS, {
           sensitiveColumns: [
-            { column: 'iban', kind: 'iban', rowsMatching: 2 },
-            { column: 'creditCardNo', kind: 'card', rowsMatching: 3 },
-            { column: 'apiKey', kind: 'secret', rowsMatching: 0 },
+            { columnIndex: 6, kind: 'card', rowsMatching: 3 },
+            { columnIndex: 4, kind: 'iban', rowsMatching: 2 },
+            { columnIndex: 2, kind: 'secret', rowsMatching: 0 },
           ],
         }),
       ]),
     );
     expect(subjects(findings)).toEqual([
-      [`${CUSTOMERS}#creditCardNo`, 'high'],
-      [`${CUSTOMERS}#iban`, 'high'],
+      [`${CUSTOMERS}#4`, 'high'],
+      [`${CUSTOMERS}#6`, 'high'],
     ]);
   });
 
-  it('emits one finding per file for the same column name, sorted by file', () => {
+  it('emits one finding per file for the same column position, sorted by file', () => {
     const findings = runRule(
       seedDataSensitive,
       project([cardSeed('test/data/Customers.csv', 1), cardSeed('db/data/Customers.csv', 2)]),
     );
     expect(subjects(findings)).toEqual([
-      ['db/data/Customers.csv#creditCardNo', 'high'],
-      ['test/data/Customers.csv#creditCardNo', 'high'],
+      ['db/data/Customers.csv#6', 'high'],
+      ['test/data/Customers.csv#6', 'high'],
     ]);
     expect(findings.map((f) => f.location?.file)).toEqual([
       'db/data/Customers.csv',
@@ -202,14 +204,14 @@ describe('SEED_DATA_SENSITIVE', () => {
     expect(findings.map((f) => f.evidence.rowsMatching)).toEqual([2, 1]);
   });
 
-  it('emits one finding per subject when a header repeats a column name, keeping the larger count', () => {
+  it('emits one finding per subject when a snapshot lists a column position twice, keeping the larger count', () => {
     const findings = runRule(
       seedDataSensitive,
       project([
         seedCsv(CUSTOMERS, {
           sensitiveColumns: [
-            { column: 'creditCardNo', kind: 'card', rowsMatching: 1 },
-            { column: 'creditCardNo', kind: 'card', rowsMatching: 4 },
+            { columnIndex: 6, kind: 'card', rowsMatching: 1 },
+            { columnIndex: 6, kind: 'card', rowsMatching: 4 },
           ],
         }),
       ]),
@@ -220,9 +222,9 @@ describe('SEED_DATA_SENSITIVE', () => {
 
   it('picks the same entry for a repeated subject whatever the order, when the counts tie', () => {
     // A snapshot edited by hand may list one subject twice with equal counts;
-    // the collector itself gives one kind per column name.
-    const secret = { column: 'token', kind: 'secret' as const, rowsMatching: 2 };
-    const card = { column: 'token', kind: 'card' as const, rowsMatching: 2 };
+    // the collector itself gives one kind per column position.
+    const secret = { columnIndex: 2, kind: 'secret' as const, rowsMatching: 2 };
+    const card = { columnIndex: 2, kind: 'card' as const, rowsMatching: 2 };
     const forward = runRule(
       seedDataSensitive,
       project([seedCsv('db/data/X.csv', { sensitiveColumns: [secret, card] })]),
@@ -233,18 +235,18 @@ describe('SEED_DATA_SENSITIVE', () => {
     );
     expect(forward).toHaveLength(1);
     expect(forward[0]!.evidence).toMatchObject({ kind: 'card', rowsMatching: 2 });
-    expect(forward[0]!.title).toBe('Seed data contains payment card numbers');
+    expect(forward[0]!.title).toBe('Seed data column 2 contains payment card numbers');
     expect(backward).toEqual(forward);
   });
 
   it('reports the larger row count for a file listed twice, whatever the order', () => {
     const fewer = seedCsv(CUSTOMERS, {
       rowsChecked: 5,
-      sensitiveColumns: [{ column: 'iban', kind: 'iban', rowsMatching: 1 }],
+      sensitiveColumns: [{ columnIndex: 4, kind: 'iban', rowsMatching: 1 }],
     });
     const more = seedCsv(CUSTOMERS, {
       rowsChecked: 9,
-      sensitiveColumns: [{ column: 'iban', kind: 'iban', rowsMatching: 1 }],
+      sensitiveColumns: [{ columnIndex: 4, kind: 'iban', rowsMatching: 1 }],
     });
     const forward = runRule(seedDataSensitive, project([fewer, more]));
     const backward = runRule(seedDataSensitive, project([more, fewer]));
@@ -256,17 +258,17 @@ describe('SEED_DATA_SENSITIVE', () => {
   it('orders findings the same whatever the collector order', () => {
     const a = seedCsv('db/data/B.csv', {
       sensitiveColumns: [
-        { column: 'secret', kind: 'secret', rowsMatching: 1 },
-        { column: 'iban', kind: 'iban', rowsMatching: 1 },
+        { columnIndex: 3, kind: 'secret', rowsMatching: 1 },
+        { columnIndex: 2, kind: 'iban', rowsMatching: 1 },
       ],
     });
     const b = cardSeed('db/data/A.csv');
     const forward = subjects(runRule(seedDataSensitive, project([a, b])));
     const backward = subjects(runRule(seedDataSensitive, project([b, a])));
     expect(forward).toEqual([
-      ['db/data/A.csv#creditCardNo', 'high'],
-      ['db/data/B.csv#iban', 'high'],
-      ['db/data/B.csv#secret', 'high'],
+      ['db/data/A.csv#6', 'high'],
+      ['db/data/B.csv#2', 'high'],
+      ['db/data/B.csv#3', 'high'],
     ]);
     expect(backward).toEqual(forward);
   });
@@ -279,8 +281,8 @@ describe('SEED_DATA_SENSITIVE', () => {
       rawProject({ id: 'third', seedData: [cardSeed('db/data/Cards.csv', 1)] }),
     );
     expect(findings.map((f) => [f.app.name, f.evidence.subject])).toEqual([
-      ['acme', `${CUSTOMERS}#creditCardNo`],
-      ['third', 'db/data/Cards.csv#creditCardNo'],
+      ['acme', `${CUSTOMERS}#6`],
+      ['third', 'db/data/Cards.csv#6'],
     ]);
   });
 
@@ -302,8 +304,8 @@ describe('SEED_DATA_SENSITIVE', () => {
       project([
         seedCsv('db/data/B.csv', {
           sensitiveColumns: [
-            { column: 'secret', kind: 'secret', rowsMatching: 1 },
-            { column: 'iban', kind: 'iban', rowsMatching: 1 },
+            { columnIndex: 3, kind: 'secret', rowsMatching: 1 },
+            { columnIndex: 2, kind: 'iban', rowsMatching: 1 },
           ],
         }),
         cardSeed('db/data/A.csv'),
@@ -312,7 +314,7 @@ describe('SEED_DATA_SENSITIVE', () => {
     );
   });
 
-  it('copies nothing from the project but the file name, the column name and counts', () => {
+  it('copies nothing from the project but the file name, the column position and counts', () => {
     const poisoned = rawProject({
       sourcesRead: ['.cdsrc.json', 'package.json'],
       files: POISON,
@@ -358,22 +360,26 @@ describe('SEED_DATA_SENSITIVE', () => {
         }),
       ),
       seedData: [
-        // The one file that fires: its other columns are poisoned but never match a value.
+        // The one file that fires: its other columns never match a value.
         seedCsv(CUSTOMERS, {
-          columnCount: POISON.length + 1,
+          columnCount: POISON.length + 7,
           rowsChecked: POISON.length,
           sensitiveColumns: [
-            { column: 'creditCardNo', kind: 'card', rowsMatching: 2 },
-            ...POISON.map((value) => ({ column: value, kind: 'secret' as const, rowsMatching: 0 })),
+            { columnIndex: 6, kind: 'card', rowsMatching: 2 },
+            ...POISON.map((_, i) => ({
+              columnIndex: 7 + i,
+              kind: 'secret' as const,
+              rowsMatching: 0,
+            })),
           ],
         }),
-        // Poisoned files and columns whose values never match, so none of them fires.
+        // Poisoned files whose columns never match a value, so none of them fires.
         ...POISON.map((value) =>
           seedCsv(value, {
             sensitiveColumns: [
-              { column: value, kind: 'card', rowsMatching: 0 },
-              { column: value, kind: 'iban', rowsMatching: 0 },
-              { column: value, kind: 'secret', rowsMatching: 0 },
+              { columnIndex: 1, kind: 'card', rowsMatching: 0 },
+              { columnIndex: 2, kind: 'iban', rowsMatching: 0 },
+              { columnIndex: 3, kind: 'secret', rowsMatching: 0 },
             ],
           }),
         ),
@@ -388,8 +394,8 @@ describe('SEED_DATA_SENSITIVE', () => {
     expect(findings).toHaveLength(1);
     expectNoValueLeak(findings, POISON);
     expect(findings[0]!.evidence).toEqual({
-      subject: `${CUSTOMERS}#creditCardNo`,
-      column: 'creditCardNo',
+      subject: `${CUSTOMERS}#6`,
+      columnIndex: 6,
       kind: 'card',
       rowsChecked: POISON.length,
       rowsMatching: 2,
