@@ -1,9 +1,17 @@
 import type { ReportData } from '@btp-lens/model';
 import { describe, expect, it } from 'vitest';
+import projectSample from '../test/fixtures/report-project.json';
 import sample from '../test/fixtures/report.json';
-import { scopeLabel, scopePhrase, startHereSentences } from './summary';
+import {
+  isProjectInventory,
+  isProjectScope,
+  scopeLabel,
+  scopePhrase,
+  startHereSentences,
+} from './summary';
 
 const data = sample as unknown as ReportData;
+const project = projectSample as unknown as ReportData;
 
 describe('startHereSentences', () => {
   it('summarises the sample scan in plain language', () => {
@@ -35,6 +43,57 @@ describe('startHereSentences', () => {
     expect(scopeLabel(scope)).toBe('acme-prod / prod');
     expect(scopePhrase({ ...scope, spaces: ['dev', 'qa'] })).toBe('spaces dev, qa of acme-prod');
     expect(scopeLabel(data.scope)).toBe('acme-prod');
+  });
+
+  it('describes a project scan by its findings', () => {
+    const s = startHereSentences(project);
+    expect(s).toEqual([
+      'The project acme-incidents was scanned on Sep 29, 2026.',
+      '3 findings need attention: 1 service is open to every authenticated user; 1 approuter route forwards requests without authentication; 1 entity holds personal data without @PersonalData annotations.',
+      'Nothing in your project was changed: this scan only read files in the project folder.',
+    ]);
+  });
+
+  it('counts findings, not projects, per project rule', () => {
+    const twice = [
+      project.findings[0]!,
+      { ...project.findings[0]!, location: { file: 'srv/other.cds' } },
+    ];
+    const s = startHereSentences({
+      ...project,
+      findings: twice,
+      summary: { ...project.summary, findings: 2, checksSkipped: 1 },
+    });
+    expect(s[1]).toBe(
+      '2 findings need attention: 2 services are open to every authenticated user.',
+    );
+    expect(s[2]).toBe(
+      '1 check could not run, so some things were not looked at. That is not a problem with your project.',
+    );
+  });
+
+  it('has a phrase for every project rule', () => {
+    const projectRules = project.rules.filter(
+      (r) => r.roles.length === 0 && r.id !== 'APP_NO_RECENT_DEPLOY',
+    );
+    expect(projectRules).toHaveLength(13);
+    for (const rule of projectRules) {
+      const finding = { ...project.findings[0]!, id: rule.id };
+      const s = startHereSentences({ ...project, findings: [finding, finding] });
+      // The fallback wording quotes the rule title; a phrase never does.
+      expect(s[1]).not.toContain(`"${rule.title}"`);
+    }
+  });
+
+  it('labels the scope of a project scan', () => {
+    expect(isProjectScope(project.scope)).toBe(true);
+    expect(isProjectScope(data.scope)).toBe(false);
+    expect(scopeLabel(project.scope)).toBe('acme-incidents');
+    expect(scopePhrase(project.scope)).toBe('project acme-incidents');
+    expect(scopePhrase({ orgs: [], projects: ['a', 'b'] })).toBe('projects a, b');
+    expect(isProjectInventory(project.apps)).toBe(true);
+    expect(isProjectInventory(data.apps)).toBe(false);
+    expect(isProjectInventory([])).toBe(false);
   });
 
   it('falls back to the rule title for rules without a phrase', () => {

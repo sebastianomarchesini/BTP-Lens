@@ -1,0 +1,390 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "btp-lens",
+    "version": "0.1.0"
+  },
+  "scannedAt": "2026-09-29T00:00:00.000Z",
+  "scope": {
+    "orgs": [],
+    "projects": [
+      "acme-incidents"
+    ]
+  },
+  "options": {
+    "deep": false,
+    "probeRoutes": false
+  },
+  "checks": [
+    {
+      "id": "collect.project",
+      "title": "Project files (package.json, .cdsrc, mta.yaml, xs-security.json, xs-app.json, *.cds, seed CSV, *.html)",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_MOCKED_AUTH_IN_PROD",
+      "title": "Mocked authentication is configured for production",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_MOCKED_USER_PASSWORD",
+      "title": "Mocked users carry passwords in the project configuration",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_AUDITLOG_MISSING",
+      "title": "Personal data is modelled but audit logging is not set up",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_AUDITLOG_NOT_BOUND",
+      "title": "Audit logging is installed but no audit log service is bound",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_PERSONAL_DATA_UNANNOTATED",
+      "title": "Entity holds personal data without @PersonalData annotations",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_SERVICE_NO_RESTRICTION",
+      "title": "Service is open to every authenticated user",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_ROLE_NOT_IN_XSUAA",
+      "title": "Role referenced in the CDS model has no scope in the XSUAA descriptor",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.XSUAA_SCOPE_UNUSED",
+      "title": "Scope is defined but no role template references it",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.APPROUTER_ROUTE_NO_AUTH",
+      "title": "Approuter route forwards requests without authentication",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.APPROUTER_CSRF_DISABLED",
+      "title": "CSRF protection is disabled on an authenticated approuter route",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.DEPLOY_ARTIFACT_IN_REPO",
+      "title": "Deployment archive (.mtar) is not ignored by git",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.SEED_DATA_SENSITIVE",
+      "title": "Seed data contains card numbers, IBANs or secrets",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.UI5_BOOTSTRAP_EXTERNAL",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "roles": [],
+      "status": "ran"
+    }
+  ],
+  "apps": [
+    {
+      "guid": "project:acme-incidents",
+      "name": "acme-incidents",
+      "org": "local",
+      "space": "project",
+      "kind": "project",
+      "state": null,
+      "lifecycleType": "unknown",
+      "stack": null,
+      "buildpacks": [
+        {
+          "name": "nodejs_buildpack",
+          "version": null
+        }
+      ],
+      "createdAt": null,
+      "updatedAt": null,
+      "lastDeployAt": null,
+      "findingCounts": {
+        "critical": 1,
+        "high": 0,
+        "medium": 1,
+        "low": 1,
+        "info": 0
+      },
+      "highestSeverity": "critical",
+      "riskScore": 106
+    }
+  ],
+  "findings": [
+    {
+      "id": "CAP_MOCKED_AUTH_IN_PROD",
+      "severity": "critical",
+      "title": "Mocked authentication is configured for production",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "requires.auth",
+        "authKind": "mocked",
+        "sourcesRead": [
+          ".cdsrc.yaml",
+          ".cdsrc.json",
+          "package.json"
+        ],
+        "sourcesNotRead": [
+          ".cdsrc-private.json",
+          ".cdsrc.js",
+          ".env",
+          "CDS_* environment variables"
+        ],
+        "impact": "severe",
+        "easeOfAttack": "easy"
+      },
+      "remediation": "Configure a production authentication strategy, for example in package.json: `\"cds\": { \"requires\": { \"[production]\": { \"auth\": \"xsuaa\" } } }` (or `\"ias\"`), bind the app to an XSUAA or IAS instance, and keep `mocked` and its users under `[development]` only. Verify the result with `cds env get requires.auth --profile production`.",
+      "references": [
+        "https://cap.cloud.sap/docs/node.js/authentication",
+        "https://cap.cloud.sap/docs/node.js/cds-env",
+        "https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/"
+      ],
+      "location": {
+        "file": "package.json"
+      }
+    },
+    {
+      "id": "CAP_AUDITLOG_MISSING",
+      "severity": "medium",
+      "title": "Fields that look like personal data are modelled but audit logging is not set up",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "requires.audit-log",
+        "personalDataDeclared": false,
+        "declaredEntities": 0,
+        "inferredEntities": 2,
+        "legacyLibrary": false,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Annotate the entities that hold personal data with `@PersonalData` (`EntitySemantics` and `DataSubjectRole` on the entity; `FieldSemantics`, `IsPotentiallyPersonal` or `IsPotentiallySensitive` on the elements), then add the `@cap-js/audit-logging` plugin with `cds add audit-logging`: it configures `cds.requires.audit-log` with console output in development and the SAP Audit Log service (`audit-log-to-restv2`) in production, and adds an `auditlog` resource to mta.yaml. Create an SAP Audit Log service instance (service `auditlog`, plan `premium`) in the target space and bind it to the app. The plugin logs only entities annotated with `@PersonalData`, so keep those annotations complete. Verify with `cds env requires.audit-log --profile production`.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/dpp-audit-logging",
+        "https://cap.cloud.sap/docs/guides/security/dpp-annotations",
+        "https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/"
+      ],
+      "location": {
+        "file": "package.json"
+      }
+    },
+    {
+      "id": "CAP_MOCKED_USER_PASSWORD",
+      "severity": "low",
+      "title": "Mocked users carry passwords in the development configuration",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "requires.auth.users",
+        "view": "development",
+        "usersWithPassword": 1,
+        "mockedUsers": 2,
+        "authKind": "mocked",
+        "impact": "minor",
+        "easeOfAttack": "complex"
+      },
+      "remediation": "Delete the `password` values from the mocked users in `cds.requires.auth.users` and keep the `users` block under `[development]` only, so it never applies to production. A developer who needs a password-protected local login can define it in `.cdsrc-private.json`, which cds reads but which must stay out of version control. If any of these passwords was ever reused on another system, change it there.",
+      "references": [
+        "https://cap.cloud.sap/docs/node.js/authentication#mocked",
+        "https://cap.cloud.sap/docs/node.js/cds-env",
+        "https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/"
+      ],
+      "location": {
+        "file": "package.json"
+      }
+    }
+  ],
+  "rules": [
+    {
+      "id": "APP_NO_RECENT_DEPLOY",
+      "title": "No deploy in the last 12 months",
+      "description": "The current droplet was staged more than 12 months ago. The app runs with the libraries, buildpack and runtime from that time, so fixes released since then are missing.",
+      "roles": [
+        "SpaceAuditor"
+      ],
+      "owasp": [
+        "A03:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#app_no_recent_deploy"
+    },
+    {
+      "id": "CAP_MOCKED_AUTH_IN_PROD",
+      "title": "Mocked authentication is configured for production",
+      "description": "The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). Anyone who knows a mocked user name can act as that user, and dummy authentication accepts every request.",
+      "roles": [],
+      "owasp": [
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_mocked_auth_in_prod"
+    },
+    {
+      "id": "CAP_MOCKED_USER_PASSWORD",
+      "title": "Mocked users carry passwords in the project configuration",
+      "description": "Mocked CAP users are defined with a password in a committed configuration file. Passwords in source files travel with every clone and are easy to reuse against other systems.",
+      "roles": [],
+      "owasp": [
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_mocked_user_password"
+    },
+    {
+      "id": "CAP_AUDITLOG_MISSING",
+      "title": "Personal data is modelled but audit logging is not set up",
+      "description": "The CDS model holds personal data, but neither @cap-js/audit-logging nor an audit-log configuration is present, so reads and changes of personal data are not logged.",
+      "roles": [],
+      "owasp": [
+        "A09:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_auditlog_missing"
+    },
+    {
+      "id": "CAP_AUDITLOG_NOT_BOUND",
+      "title": "Audit logging is installed but no audit log service is bound",
+      "description": "The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so audit entries go to the console or are dropped in production.",
+      "roles": [],
+      "owasp": [
+        "A09:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_auditlog_not_bound"
+    },
+    {
+      "id": "CAP_PERSONAL_DATA_UNANNOTATED",
+      "title": "Entity holds personal data without @PersonalData annotations",
+      "description": "An entity has fields that look like personal data (names, contact details, identifiers) but no @PersonalData annotation, so CAP cannot log access to it or apply its data-privacy features.",
+      "roles": [],
+      "owasp": [
+        "A04:2025",
+        "A09:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_personal_data_unannotated"
+    },
+    {
+      "id": "CAP_SERVICE_NO_RESTRICTION",
+      "title": "Service is open to every authenticated user",
+      "description": "A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and change its data.",
+      "roles": [],
+      "owasp": [
+        "A01:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_service_no_restriction"
+    },
+    {
+      "id": "CAP_ROLE_NOT_IN_XSUAA",
+      "title": "Role referenced in the CDS model has no scope in the XSUAA descriptor",
+      "description": "A role named in @requires or @restrict has no matching scope in the XSUAA security descriptor, so nobody can be granted it: the restriction either locks everyone out or is bypassed by a misspelt role elsewhere.",
+      "roles": [],
+      "owasp": [
+        "A01:2025",
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_role_not_in_xsuaa"
+    },
+    {
+      "id": "XSUAA_SCOPE_UNUSED",
+      "title": "Scope is defined but no role template references it",
+      "description": "A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so it can never be assigned; such leftovers hide the real authorization model.",
+      "roles": [],
+      "owasp": [
+        "A02:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#xsuaa_scope_unused"
+    },
+    {
+      "id": "APPROUTER_ROUTE_NO_AUTH",
+      "title": "Approuter route forwards requests without authentication",
+      "description": "An approuter route to a destination or service has authenticationType none, or the whole xs-app.json disables authentication, so backend endpoints are reachable without a login.",
+      "roles": [],
+      "owasp": [
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#approuter_route_no_auth"
+    },
+    {
+      "id": "APPROUTER_CSRF_DISABLED",
+      "title": "CSRF protection is disabled on an authenticated approuter route",
+      "description": "A route to a destination sets csrfProtection to false while still requiring a login, so a malicious page can make the browser send state-changing requests with the user's session.",
+      "roles": [],
+      "owasp": [
+        "A01:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#approuter_csrf_disabled"
+    },
+    {
+      "id": "DEPLOY_ARTIFACT_IN_REPO",
+      "title": "Deployment archive (.mtar) is not ignored by git",
+      "description": "A built MTA archive lies in the project and no .gitignore pattern excludes it. Archives carry resolved dependencies and generated configuration, and they end up in the repository history.",
+      "roles": [],
+      "owasp": [
+        "A03:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#deploy_artifact_in_repo"
+    },
+    {
+      "id": "SEED_DATA_SENSITIVE",
+      "title": "Seed data contains card numbers, IBANs or secrets",
+      "description": "A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets. Seed data is deployed to every system and committed with the project.",
+      "roles": [],
+      "owasp": [
+        "A04:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#seed_data_sensitive"
+    },
+    {
+      "id": "UI5_BOOTSTRAP_EXTERNAL",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "description": "An HTML page bootstraps SAPUI5 from an external host without an integrity attribute, so the application trusts whatever that host serves, including an unpinned latest version.",
+      "roles": [],
+      "owasp": [
+        "A08:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#ui5_bootstrap_external"
+    }
+  ],
+  "summary": {
+    "apps": 0,
+    "projects": 1,
+    "findings": 3,
+    "findingsBySeverity": {
+      "critical": 1,
+      "high": 0,
+      "medium": 1,
+      "low": 1,
+      "info": 0
+    },
+    "checksSkipped": 0
+  }
+}

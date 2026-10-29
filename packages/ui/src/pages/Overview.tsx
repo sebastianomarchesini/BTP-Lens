@@ -3,6 +3,7 @@ import { Card, CardHeader, List, ListItemStandard, MessageStrip } from '@ui5/web
 import { useNavigate, useOutletContext } from 'react-router';
 import { EmptyState } from '../components/EmptyState';
 import { SeverityChart } from '../components/SeverityChart';
+import { formatEvidenceValue } from '../data/format';
 import { SEVERITY_LABEL, SEVERITY_STATE } from '../data/severity';
 import { scopeLabel, startHereSentences } from '../data/summary';
 
@@ -12,27 +13,58 @@ interface Kpi {
   hint: string;
 }
 
-/** Counts findings for rules that ran; "Not checked" when none of them ran. */
+/**
+ * Counts what the rules affected; "Not checked" when none of them ran. A CF
+ * rule yields one finding per app, a project rule one per subject (service,
+ * entity, ...) within a project, so the subject is part of the key.
+ */
 function ruleKpi(data: ReportData, label: string, ruleIds: string[], unit: string): Kpi {
   const ran = ruleIds.some((id) =>
     data.checks.some((c) => c.id === `rule.${id}` && c.status === 'ran'),
   );
   if (!ran) return { label, value: '—', hint: 'Not checked in this scan' };
-  const apps = new Set(data.findings.filter((f) => ruleIds.includes(f.id)).map((f) => f.app.guid));
-  return { label, value: String(apps.size), hint: unit };
+  const affected = new Set(
+    data.findings
+      .filter((f) => ruleIds.includes(f.id))
+      .map((f) => `${f.app.guid}:${formatEvidenceValue(f.evidence.subject)}`),
+  );
+  return { label, value: String(affected.size), hint: unit };
 }
 
-export function Overview() {
-  const data = useOutletContext<ReportData>();
-  const navigate = useNavigate();
+/** The two rule KPIs depend on what was scanned: a CF landscape or local projects. */
+function kpiRow(data: ReportData): Kpi[] {
   const s = data.summary.findingsBySeverity;
-  const kpis: Kpi[] = [
+  const project = data.summary.projects > 0;
+  const findings = {
+    label: 'Critical and high findings',
+    value: String(s.critical + s.high),
+    hint: `of ${data.summary.findings} findings`,
+  };
+  if (project) {
+    return [
+      {
+        label: 'Projects scanned',
+        value: String(data.summary.projects),
+        hint: scopeLabel(data.scope),
+      },
+      findings,
+      ruleKpi(
+        data,
+        'Services open to all users',
+        ['CAP_SERVICE_NO_RESTRICTION'],
+        'services affected',
+      ),
+      ruleKpi(
+        data,
+        'Personal data without annotations',
+        ['CAP_PERSONAL_DATA_UNANNOTATED'],
+        'entities affected',
+      ),
+    ];
+  }
+  return [
     { label: 'Apps scanned', value: String(data.summary.apps), hint: scopeLabel(data.scope) },
-    {
-      label: 'Critical and high findings',
-      value: String(s.critical + s.high),
-      hint: `of ${data.summary.findings} findings`,
-    },
+    findings,
     ruleKpi(data, 'Idle apps', ['APP_IDLE'], 'apps with no activity'),
     ruleKpi(
       data,
@@ -41,6 +73,14 @@ export function Overview() {
       'apps affected',
     ),
   ];
+}
+
+export function Overview() {
+  const data = useOutletContext<ReportData>();
+  const navigate = useNavigate();
+  const s = data.summary.findingsBySeverity;
+  const kpis = kpiRow(data);
+  const riskTitle = data.summary.projects > 0 ? 'Top risks' : 'Top risky apps';
   const skipped = data.checks.filter((c) => c.status === 'skipped');
   const risky = data.apps.filter((a) => a.riskScore > 0).slice(0, 5);
 
@@ -92,19 +132,21 @@ export function Overview() {
           </div>
         </Card>
         <Card
-          header={
-            <CardHeader titleText="Top risky apps" subtitleText="Ranked by weighted findings" />
-          }
+          header={<CardHeader titleText={riskTitle} subtitleText="Ranked by weighted findings" />}
         >
           {risky.length === 0 ? (
             <EmptyState
               name="NoEntries"
               design="Spot"
-              title="No risky apps"
-              subtitle="No rule matched an app in this scan."
+              title={data.summary.projects > 0 ? 'No risks found' : 'No risky apps'}
+              subtitle={
+                data.summary.projects > 0
+                  ? 'No rule matched in this scan.'
+                  : 'No rule matched an app in this scan.'
+              }
             />
           ) : (
-            <List accessibleName="Top risky apps">
+            <List accessibleName={riskTitle}>
               {risky.map((app) => {
                 const severity = app.highestSeverity;
                 return (

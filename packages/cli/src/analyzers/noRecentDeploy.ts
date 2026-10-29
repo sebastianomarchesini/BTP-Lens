@@ -25,6 +25,7 @@ export const noRecentDeploy: Analyzer = {
       'The current droplet was staged more than 12 months ago. The app runs with the libraries, ' +
       'buildpack and runtime from that time, so fixes released since then are missing.',
     roles: ['SpaceAuditor'],
+    owasp: ['A03:2025'],
     helpUri: ruleHelpUri(RULE_ID),
   },
   requires: ['collect.apps', 'collect.droplets'],

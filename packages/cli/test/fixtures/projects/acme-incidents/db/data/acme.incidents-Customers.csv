@@ -1,0 +1,3 @@
+ID,firstName,lastName,email,phone,creditCardNo,jane_doe_notes
+3b23bb4b-4ac7-4a24-ac02-aa10cabd842c,Mary,Rowe,poison.row@example.com,+49 170 0000001,4111111111111111,"prefers e-mail, see jane_doe_notes"
+7ef1f9a2-0f8e-4a1e-9b1a-2a0a2d4a1c11,Tom,Pine,tom.pine@example.com,+49 170 0000002,not-a-card,

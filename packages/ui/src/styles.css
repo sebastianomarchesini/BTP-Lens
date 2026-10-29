@@ -140,6 +140,23 @@ body {
   color: var(--sapContent_LabelColor);
 }
 
+/* Project findings: "srv/services.cds:3". Long paths wrap at phone width. */
+.finding-location {
+  align-self: flex-start;
+  max-width: 100%;
+  font-family: var(--sapContent_MonospaceFontFamily);
+  font-size: var(--sapFontSmallSize);
+  color: var(--sapContent_LabelColor);
+  overflow-wrap: anywhere;
+}
+
+.rule-owasp {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--sapContent_LabelColor);
+  font-size: var(--sapFontSmallSize);
+}
+
 .evidence {
   display: flex;
   flex-wrap: wrap;

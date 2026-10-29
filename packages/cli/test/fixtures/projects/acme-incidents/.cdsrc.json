@@ -1,0 +1,1 @@
+{ "requires": { "auth": { "restrict_all_services": true } } }

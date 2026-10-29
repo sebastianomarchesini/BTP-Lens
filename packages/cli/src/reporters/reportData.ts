@@ -17,7 +17,8 @@ export function toReportData(snapshot: Snapshot): ReportData {
     findings: snapshot.findings,
     rules: ANALYZERS.map((a) => a.rule),
     summary: {
-      apps: snapshot.apps.length,
+      apps: snapshot.apps.filter((app) => app.kind === 'app').length,
+      projects: snapshot.apps.filter((app) => app.kind === 'project').length,
       findings: snapshot.findings.length,
       findingsBySeverity,
       checksSkipped: snapshot.checks.filter((c) => c.status === 'skipped').length,

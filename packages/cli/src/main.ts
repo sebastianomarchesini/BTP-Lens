@@ -2,10 +2,12 @@ import { Command, CommanderError, Option } from 'commander';
 import { reanalyze } from './analyzers/index.js';
 import {
   type FailOn,
+  type ProjectConfig,
   type ReportConfig,
   type ScanConfig,
   failThreshold,
   parseApiUrl,
+  parseProjectConfig,
   parseReportConfig,
   parseScanConfig,
 } from './config.js';
@@ -17,6 +19,7 @@ import type { FetchLike } from './http/httpClient.js';
 import { sanitizeOutput } from './io/redact.js';
 import { meetsThreshold } from './model/severity.js';
 import type { ReportData } from './model/snapshot.js';
+import { scanProject } from './project.js';
 import { writeReports } from './reporters/index.js';
 import { toReportData } from './reporters/reportData.js';
 import { scan } from './scan.js';
@@ -52,11 +55,21 @@ function exitCodeFor(data: ReportData, failOn: FailOn): number {
   return data.findings.some((f) => meetsThreshold(f.severity, threshold)) ? EXIT.findings : EXIT.ok;
 }
 
+/** A snapshot written by `btp-lens project`: no org, one or more local projects. */
+function isProjectScan(data: ReportData): boolean {
+  return data.scope.orgs.length === 0 && (data.scope.projects?.length ?? 0) > 0;
+}
+
+function scannedLine(data: ReportData): string {
+  if (isProjectScan(data)) return `Scanned project ${(data.scope.projects ?? []).join(', ')}`;
+  return `Scanned ${data.summary.apps} app(s) in ${[data.scope.orgs.join(', '), ...(data.scope.spaces ?? [])].join(' / ')}`;
+}
+
 function printSummary(data: ReportData, files: string[], io: CliIo): void {
   const s = data.summary.findingsBySeverity;
   const skipped = data.summary.checksSkipped;
   io.stdout(
-    `Scanned ${data.summary.apps} app(s) in ${[data.scope.orgs.join(', '), ...(data.scope.spaces ?? [])].join(' / ')}: ` +
+    `${scannedLine(data)}: ` +
       `${data.summary.findings} finding(s) (${s.critical} critical, ${s.high} high, ` +
       `${s.medium} medium, ${s.low} low, ${s.info} info)` +
       `${skipped > 0 ? `, ${skipped} check(s) skipped` : ''}.\n`,
@@ -66,7 +79,9 @@ function printSummary(data: ReportData, files: string[], io: CliIo): void {
   }
   io.stdout(`Wrote:\n${files.map((f) => `  ${f}\n`).join('')}`);
   io.stdout(
-    'Reports describe your landscape (org, space, app and route names). Share them only with people who may see it, and do not commit them.\n',
+    isProjectScan(data)
+      ? 'Reports describe your project (file, service, entity and role names). Share them only with people who may see it, and do not commit them.\n'
+      : 'Reports describe your landscape (org, space, app and route names). Share them only with people who may see it, and do not commit them.\n',
   );
 }
 
@@ -81,6 +96,21 @@ async function runScan(config: ScanConfig, io: CliIo): Promise<number> {
     concurrency: config.concurrency,
     env: io.env,
     fetch: io.fetch,
+    now: io.now,
+    log,
+  });
+  const snapshotPath = await writeSnapshot(snapshot, config.out);
+  const data = toReportData(snapshot);
+  const files = await writeReports(data, config.format, config.out);
+  if (!config.quiet) printSummary(data, [snapshotPath, ...files], io);
+  return exitCodeFor(data, config.failOn);
+}
+
+async function runProject(config: ProjectConfig, io: CliIo): Promise<number> {
+  const log = config.quiet ? () => {} : (message: string) => io.stderr(`${message}\n`);
+  const snapshot = await scanProject({
+    path: config.path,
+    outDir: config.out,
     now: io.now,
     log,
   });
@@ -167,6 +197,21 @@ function buildProgram(io: CliIo, setExit: (code: number) => void): Command {
     .option('--quiet', 'print errors only', false)
     .action(async (options: Record<string, unknown>) => {
       setExit(await runScan(parseScanConfig(options), io));
+    });
+
+  program
+    .command('project')
+    .description('scan a local CAP or MTA project directory (file reads only, no network)')
+    .requiredOption(
+      '--path <dir>',
+      'project directory (contains package.json, mta.yaml or .cdsrc.json)',
+    )
+    .option('--out <dir>', 'output directory', './reports')
+    .option('--format <list>', 'report formats: html,json,csv,sarif', DEFAULT_FORMATS)
+    .option('--fail-on <severity>', FAIL_ON_HELP, 'none')
+    .option('--quiet', 'print errors only', false)
+    .action(async (options: Record<string, unknown>) => {
+      setExit(await runProject(parseProjectConfig(options), io));
     });
 
   program

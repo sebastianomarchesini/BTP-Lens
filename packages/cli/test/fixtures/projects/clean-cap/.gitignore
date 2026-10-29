@@ -1,0 +1,4 @@
+# build and deployment artefacts
+node_modules/
+gen/
+*.mtar

@@ -1,0 +1,12 @@
+{
+  "xsappname": "clean-cap",
+  "tenant-mode": "dedicated",
+  "scopes": [
+    { "name": "$XSAPPNAME.admin", "description": "Administer the catalog" },
+    { "name": "$XSAPPNAME.viewer", "description": "Read the catalog" }
+  ],
+  "role-templates": [
+    { "name": "admin", "description": "Administrator", "scope-references": ["$XSAPPNAME.admin"] },
+    { "name": "viewer", "description": "Viewer", "scope-references": ["$XSAPPNAME.viewer"] }
+  ]
+}

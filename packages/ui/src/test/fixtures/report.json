@@ -47,6 +47,7 @@
       "name": "legacy-reporting",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STOPPED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs3",
@@ -74,6 +75,7 @@
       "name": "docs-static",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -101,6 +103,7 @@
       "name": "orders-approuter",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -128,6 +131,7 @@
       "name": "custom-bp-app",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -155,6 +159,7 @@
       "name": "docker-worker",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "docker",
       "stack": null,
@@ -177,6 +182,7 @@
       "name": "inventory-java",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -204,6 +210,7 @@
       "name": "never-staged",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STOPPED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -226,6 +233,7 @@
       "name": "orders-srv",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -319,11 +327,147 @@
       "roles": [
         "SpaceAuditor"
       ],
+      "owasp": [
+        "A03:2025"
+      ],
       "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#app_no_recent_deploy"
+    },
+    {
+      "id": "CAP_MOCKED_AUTH_IN_PROD",
+      "title": "Mocked authentication is configured for production",
+      "description": "The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). Anyone who knows a mocked user name can act as that user, and dummy authentication accepts every request.",
+      "roles": [],
+      "owasp": [
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_mocked_auth_in_prod"
+    },
+    {
+      "id": "CAP_MOCKED_USER_PASSWORD",
+      "title": "Mocked users carry passwords in the project configuration",
+      "description": "Mocked CAP users are defined with a password in a committed configuration file. Passwords in source files travel with every clone and are easy to reuse against other systems.",
+      "roles": [],
+      "owasp": [
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_mocked_user_password"
+    },
+    {
+      "id": "CAP_AUDITLOG_MISSING",
+      "title": "Personal data is modelled but audit logging is not set up",
+      "description": "The CDS model holds personal data, but neither @cap-js/audit-logging nor an audit-log configuration is present, so reads and changes of personal data are not logged.",
+      "roles": [],
+      "owasp": [
+        "A09:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_auditlog_missing"
+    },
+    {
+      "id": "CAP_AUDITLOG_NOT_BOUND",
+      "title": "Audit logging is installed but no audit log service is bound",
+      "description": "The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so audit entries go to the console or are dropped in production.",
+      "roles": [],
+      "owasp": [
+        "A09:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_auditlog_not_bound"
+    },
+    {
+      "id": "CAP_PERSONAL_DATA_UNANNOTATED",
+      "title": "Entity holds personal data without @PersonalData annotations",
+      "description": "An entity has fields that look like personal data (names, contact details, identifiers) but no @PersonalData annotation, so CAP cannot log access to it or apply its data-privacy features.",
+      "roles": [],
+      "owasp": [
+        "A04:2025",
+        "A09:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_personal_data_unannotated"
+    },
+    {
+      "id": "CAP_SERVICE_NO_RESTRICTION",
+      "title": "Service is open to every authenticated user",
+      "description": "A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and change its data.",
+      "roles": [],
+      "owasp": [
+        "A01:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_service_no_restriction"
+    },
+    {
+      "id": "CAP_ROLE_NOT_IN_XSUAA",
+      "title": "Role referenced in the CDS model has no scope in the XSUAA descriptor",
+      "description": "A role named in @requires or @restrict has no matching scope in the XSUAA security descriptor, so nobody can be granted it: the restriction either locks everyone out or is bypassed by a misspelt role elsewhere.",
+      "roles": [],
+      "owasp": [
+        "A01:2025",
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#cap_role_not_in_xsuaa"
+    },
+    {
+      "id": "XSUAA_SCOPE_UNUSED",
+      "title": "Scope is defined but no role template references it",
+      "description": "A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so it can never be assigned; such leftovers hide the real authorization model.",
+      "roles": [],
+      "owasp": [
+        "A02:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#xsuaa_scope_unused"
+    },
+    {
+      "id": "APPROUTER_ROUTE_NO_AUTH",
+      "title": "Approuter route forwards requests without authentication",
+      "description": "An approuter route to a destination or service has authenticationType none, or the whole xs-app.json disables authentication, so backend endpoints are reachable without a login.",
+      "roles": [],
+      "owasp": [
+        "A07:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#approuter_route_no_auth"
+    },
+    {
+      "id": "APPROUTER_CSRF_DISABLED",
+      "title": "CSRF protection is disabled on an authenticated approuter route",
+      "description": "A route to a destination sets csrfProtection to false while still requiring a login, so a malicious page can make the browser send state-changing requests with the user's session.",
+      "roles": [],
+      "owasp": [
+        "A01:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#approuter_csrf_disabled"
+    },
+    {
+      "id": "DEPLOY_ARTIFACT_IN_REPO",
+      "title": "Deployment archive (.mtar) is not ignored by git",
+      "description": "A built MTA archive lies in the project and no .gitignore pattern excludes it. Archives carry resolved dependencies and generated configuration, and they end up in the repository history.",
+      "roles": [],
+      "owasp": [
+        "A03:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#deploy_artifact_in_repo"
+    },
+    {
+      "id": "SEED_DATA_SENSITIVE",
+      "title": "Seed data contains card numbers, IBANs or secrets",
+      "description": "A CSV seed file has a column whose name and values look like payment card numbers, IBANs or secrets. Seed data is deployed to every system and committed with the project.",
+      "roles": [],
+      "owasp": [
+        "A04:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#seed_data_sensitive"
+    },
+    {
+      "id": "UI5_BOOTSTRAP_EXTERNAL",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "description": "An HTML page bootstraps SAPUI5 from an external host without an integrity attribute, so the application trusts whatever that host serves, including an unpinned latest version.",
+      "roles": [],
+      "owasp": [
+        "A08:2025"
+      ],
+      "helpUri": "https://github.com/sebastianomarchesini/BTP-Lens/blob/main/docs/rules.md#ui5_bootstrap_external"
     }
   ],
   "summary": {
     "apps": 8,
+    "projects": 0,
     "findings": 3,
     "findingsBySeverity": {
       "critical": 0,

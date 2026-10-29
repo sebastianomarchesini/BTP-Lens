@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { CSV_BOM, renderAppsCsv, renderFindingsCsv, csvCell } from '../../src/reporters/csv.js';
 import { DATA_PLACEHOLDER, renderHtml, scriptSafeJson } from '../../src/reporters/html.js';
@@ -5,7 +6,13 @@ import { parseFormats } from '../../src/reporters/index.js';
 import { toReportData } from '../../src/reporters/reportData.js';
 import { renderSarif } from '../../src/reporters/sarif.js';
 import { scan } from '../../src/scan.js';
+import { scanProject } from '../../src/project.js';
+import { type Analyzer, ruleHelpUri } from '../../src/analyzers/types.js';
+import { analyze } from '../../src/analyzers/index.js';
+import { projectFinding } from '../../src/analyzers/project/support.js';
+import { SNAPSHOT_SCHEMA_VERSION, type Snapshot } from '../../src/model/snapshot.js';
 import { ACME, acmeFetch } from '../support/acme.js';
+import { NOW, PROJECT_COLLECTOR, rawData, rawProject } from '../support/project.js';
 
 async function acmeReport() {
   const snapshot = await scan({
@@ -19,6 +26,57 @@ async function acmeReport() {
     now: () => ACME.now,
   });
   return toReportData(snapshot);
+}
+
+/** A project report with two findings of one rule at two locations. */
+function projectReport() {
+  const rule: Analyzer = {
+    rule: {
+      id: 'TEST_RULE',
+      title: 'Test rule',
+      description: 'A rule for the reporter tests.',
+      roles: [],
+      owasp: ['A01:2025', 'A07:2025'],
+      helpUri: ruleHelpUri('TEST_RULE'),
+    },
+    requires: ['collect.project'],
+    analyze(context) {
+      return context.raw.projects.flatMap((project) => [
+        projectFinding(context, project, {
+          id: 'TEST_RULE',
+          title: 'First',
+          subject: 'AdminService',
+          severity: 'high',
+          location: { file: 'srv/services.cds', line: 3 },
+          remediation: 'Restrict it.',
+          references: [],
+        }),
+        projectFinding(context, project, {
+          id: 'TEST_RULE',
+          title: 'Second',
+          subject: 'ProcessorService',
+          severity: 'high',
+          location: { file: 'srv/services.cds' },
+          remediation: 'Restrict it.',
+          references: [],
+        }),
+      ]);
+    },
+  };
+  const raw = rawData(rawProject({ id: 'acme-incidents' }));
+  const analysis = analyze(raw, NOW, [PROJECT_COLLECTOR], [rule]);
+  const snapshot: Snapshot = {
+    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+    tool: { name: 'btp-lens', version: '0.0.0' },
+    scannedAt: NOW,
+    scope: { orgs: [], projects: ['acme-incidents'] },
+    options: { deep: false, probeRoutes: false },
+    checks: [PROJECT_COLLECTOR, ...analysis.ruleChecks],
+    raw,
+    apps: analysis.apps,
+    findings: analysis.findings,
+  };
+  return { ...toReportData(snapshot), rules: [rule.rule] };
 }
 
 describe('csvCell', () => {
@@ -47,11 +105,25 @@ describe('CSV reports', () => {
     const data = await acmeReport();
     const findings = renderFindingsCsv(data).slice(CSV_BOM.length).trimEnd().split('\r\n');
     expect(findings[0]).toBe(
-      'rule_id,severity,title,org,space,app,app_guid,remediation,references,evidence',
+      'rule_id,severity,title,org,space,app,app_guid,remediation,references,evidence,owasp,file,line',
     );
     expect(findings).toHaveLength(1 + data.findings.length);
+    expect(findings[1]?.endsWith(',A03:2025,,')).toBe(true);
     const apps = renderAppsCsv(data).slice(CSV_BOM.length).trimEnd().split('\r\n');
     expect(apps).toHaveLength(1 + 8);
+    expect(apps[0]?.endsWith(',info,kind')).toBe(true);
+    expect(apps[1]?.endsWith(',app')).toBe(true);
+  });
+
+  it('writes OWASP tags, file and line for project findings, and empty CF columns', () => {
+    const data = projectReport();
+    const findings = renderFindingsCsv(data).slice(CSV_BOM.length).trimEnd().split('\r\n');
+    expect(findings[1]?.endsWith(',A01:2025 A07:2025,srv/services.cds,3')).toBe(true);
+    expect(findings[2]?.endsWith(',A01:2025 A07:2025,srv/services.cds,')).toBe(true);
+    const apps = renderAppsCsv(data).slice(CSV_BOM.length).trimEnd().split('\r\n');
+    expect(apps[1]).toBe(
+      'local,project,acme-incidents,project:acme-incidents,,unknown,,,,50,high,0,2,0,0,0,project',
+    );
   });
 
   it('starts with a UTF-8 byte-order mark so that Excel reads non-ASCII names', async () => {
@@ -104,6 +176,93 @@ describe('SARIF report', () => {
       'cf/acme-prod/prod/legacy-reporting',
     );
     expect(legacy?.partialFingerprints['btpLensFinding/v1']).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it('keeps the 0.1 fingerprint for CF findings and tags rules with their OWASP categories', async () => {
+    const data = await acmeReport();
+    const sarif = JSON.parse(renderSarif(data)) as {
+      runs: {
+        tool: { driver: { rules: { id: string; properties: { tags: string[] } }[] } };
+        results: { properties: { appGuid: string }; partialFingerprints: Record<string, string> }[];
+      }[];
+    };
+    const run = sarif.runs[0]!;
+    const result = run.results[0]!;
+    const expected = createHash('sha256')
+      .update(`APP_NO_RECENT_DEPLOY:${result.properties.appGuid}`)
+      .digest('hex');
+    expect(result.partialFingerprints).toEqual({
+      'btpLensFinding/v1': expected,
+      primaryLocationLineHash: expected,
+    });
+    expect(run.tool.driver.rules[0]?.properties.tags).toEqual([
+      'cloud-foundry',
+      'btp',
+      'owasp/A03:2025',
+    ]);
+  });
+
+  it('locates project findings by relative file with a base id and gives each a distinct fingerprint', () => {
+    const data = projectReport();
+    const text = renderSarif(data);
+    const sarif = JSON.parse(text) as {
+      runs: {
+        results: {
+          locations: { physicalLocation: Record<string, unknown> }[];
+          partialFingerprints: Record<string, string>;
+        }[];
+      }[];
+    };
+    const [first, second] = sarif.runs[0]!.results;
+    expect(first?.locations[0]?.physicalLocation).toEqual({
+      artifactLocation: { uri: 'srv/services.cds', uriBaseId: 'PROJECTROOT' },
+      region: { startLine: 3 },
+    });
+    expect(second?.locations[0]?.physicalLocation).toEqual({
+      artifactLocation: { uri: 'srv/services.cds', uriBaseId: 'PROJECTROOT' },
+    });
+    expect(first?.partialFingerprints['btpLensFinding/v1']).not.toBe(
+      second?.partialFingerprints['btpLensFinding/v1'],
+    );
+    expect(first?.partialFingerprints['btpLensFinding/v1']).toBe(
+      createHash('sha256')
+        .update('TEST_RULE:project:acme-incidents:srv/services.cds:AdminService')
+        .digest('hex'),
+    );
+    for (const forbidden of [
+      'workingDirectory',
+      'originalUriBaseIds',
+      'file://',
+      '/home/',
+      '/Users/',
+      'C:\\\\',
+    ]) {
+      expect(text, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it('uses a project pseudo-path when a project finding has no file', async () => {
+    const snapshot = await scanProject({ path: process.cwd(), now: () => new Date(NOW) });
+    const data = toReportData(snapshot);
+    data.findings.push({
+      id: 'TEST_RULE',
+      severity: 'low',
+      title: 'No file',
+      app: data.apps[0]!,
+      evidence: { subject: 'x' },
+      remediation: '',
+      references: [],
+    });
+    const sarif = JSON.parse(renderSarif(data)) as {
+      runs: {
+        results: { locations: { physicalLocation: { artifactLocation: { uri: string } } }[] }[];
+      }[];
+    };
+    // The real collector names the project after package.json (btp-lens), not the folder.
+    expect(snapshot.scope.projects).toEqual(['btp-lens']);
+    expect(sarif.runs[0]?.results[0]?.locations[0]?.physicalLocation.artifactLocation.uri).toBe(
+      'project/btp-lens',
+    );
   });
 });
 

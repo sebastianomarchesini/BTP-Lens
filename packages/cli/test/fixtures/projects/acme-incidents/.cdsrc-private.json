@@ -1,0 +1,1 @@
+{ "requires": { "auth": { "credentials": { "clientid": "poison-client", "clientsecret": "POISON_clientsecret" } } } }

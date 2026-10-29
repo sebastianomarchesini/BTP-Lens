@@ -1,0 +1,5 @@
+{
+  "VCAP_SERVICES": {
+    "hana": [{ "credentials": { "user": "POISON_vcap_user", "password": "POISON_vcap_password" } }]
+  }
+}

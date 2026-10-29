@@ -1,0 +1,38 @@
+{
+  "name": "acme-incidents",
+  "version": "1.0.0",
+  "description": "Synthetic incident-desk sample used as a btp-lens test fixture",
+  "author": "Jane Poison <jane.poison@example.com>",
+  "repository": "https://POISON_repo_token@github.com/acme/acme-incidents.git",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
+    "express": "^4",
+    "poison-git": "git+https://POISON_git_token@github.com/acme/private.git",
+    "poison-file": "file:/Users/poison-user/lib",
+    "poison-alias": "npm:@poison-scope/private@1.0.0"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "cds-serve"
+  },
+  "cds": {
+    "requires": {
+      "auth": "mocked",
+      "[development]": {
+        "auth": {
+          "users": {
+            "poison.user@example.com": { "password": "POISON_hunter2", "roles": ["admin"] },
+            "alice": { "roles": ["support"] }
+          }
+        }
+      }
+    }
+  }
+}

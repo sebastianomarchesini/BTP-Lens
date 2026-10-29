@@ -1,0 +1,806 @@
+{
+  "schemaVersion": 1,
+  "tool": {
+    "name": "btp-lens",
+    "version": "0.1.0"
+  },
+  "scannedAt": "2026-09-29T00:00:00.000Z",
+  "scope": {
+    "orgs": [],
+    "projects": [
+      "acme-incidents"
+    ]
+  },
+  "options": {
+    "deep": false,
+    "probeRoutes": false
+  },
+  "checks": [
+    {
+      "id": "collect.project",
+      "title": "Project files (package.json, .cdsrc, mta.yaml, xs-security.json, xs-app.json, *.cds, seed CSV, *.html)",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_MOCKED_AUTH_IN_PROD",
+      "title": "Mocked authentication is configured for production",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_MOCKED_USER_PASSWORD",
+      "title": "Mocked users carry passwords in the project configuration",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_AUDITLOG_MISSING",
+      "title": "Personal data is modelled but audit logging is not set up",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_AUDITLOG_NOT_BOUND",
+      "title": "Audit logging is installed but no audit log service is bound",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_PERSONAL_DATA_UNANNOTATED",
+      "title": "Entity holds personal data without @PersonalData annotations",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_SERVICE_NO_RESTRICTION",
+      "title": "Service is open to every authenticated user",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.CAP_ROLE_NOT_IN_XSUAA",
+      "title": "Role referenced in the CDS model has no scope in the XSUAA descriptor",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.XSUAA_SCOPE_UNUSED",
+      "title": "Scope is defined but no role template references it",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.APPROUTER_ROUTE_NO_AUTH",
+      "title": "Approuter route forwards requests without authentication",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.APPROUTER_CSRF_DISABLED",
+      "title": "CSRF protection is disabled on an authenticated approuter route",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.DEPLOY_ARTIFACT_IN_REPO",
+      "title": "Deployment archive (.mtar) is not ignored by git",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.SEED_DATA_SENSITIVE",
+      "title": "Seed data contains card numbers, IBANs or secrets",
+      "roles": [],
+      "status": "ran"
+    },
+    {
+      "id": "rule.UI5_BOOTSTRAP_EXTERNAL",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "roles": [],
+      "status": "ran"
+    }
+  ],
+  "raw": {
+    "orgs": [],
+    "spaces": [],
+    "apps": [],
+    "droplets": [],
+    "projects": [
+      {
+        "id": "acme-incidents",
+        "sourcesRead": [
+          ".cdsrc.yaml",
+          ".cdsrc.json",
+          "package.json"
+        ],
+        "files": [
+          ".cdsrc.json",
+          ".cdsrc.yaml",
+          "app/incidents/webapp/index.html",
+          "app/incidents/webapp/test/flpSandbox.html",
+          "app/incidents/xs-app.json",
+          "app/launchpage.html",
+          "db/data/acme.incidents-Customers.csv",
+          "db/data/acme.incidents-Status.csv",
+          "db/schema.cds",
+          "mta.yaml",
+          "package.json",
+          "srv/external/ExternalService.cds",
+          "srv/services.cds",
+          "test/data/POISON-export.csv",
+          "xs-security.json"
+        ],
+        "filesTruncated": false,
+        "unreadable": [
+          {
+            "file": "db/big.cds",
+            "kind": "too-large"
+          }
+        ],
+        "repository": true,
+        "gitIgnore": {
+          "present": false
+        },
+        "packageJson": {
+          "present": true,
+          "name": "acme-incidents",
+          "dependencies": [
+            {
+              "name": "@sap/cds",
+              "range": "^9"
+            },
+            {
+              "name": "@sap/xssec",
+              "range": "^4"
+            },
+            {
+              "name": "express",
+              "range": "^4"
+            },
+            {
+              "name": "poison-git",
+              "range": "[non-registry]"
+            },
+            {
+              "name": "poison-file",
+              "range": "[non-registry]"
+            },
+            {
+              "name": "poison-alias",
+              "range": "[non-registry]"
+            }
+          ],
+          "devDependencies": [
+            {
+              "name": "@cap-js/sqlite",
+              "range": "^2"
+            }
+          ],
+          "nodeEngine": ">=22"
+        },
+        "cds": {
+          "effective": {
+            "development": {
+              "authKind": "mocked",
+              "mockedUsers": 2,
+              "mockedUsersWithPassword": 1,
+              "restrictAllServices": true,
+              "auditLogKind": null,
+              "auditLogConfigured": false
+            },
+            "production": {
+              "authKind": "mocked",
+              "mockedUsers": 0,
+              "mockedUsersWithPassword": 0,
+              "restrictAllServices": true,
+              "auditLogKind": null,
+              "auditLogConfigured": false
+            }
+          }
+        },
+        "mta": {
+          "file": "mta.yaml",
+          "id": "acme-incidents",
+          "modules": [
+            {
+              "name": "acme-incidents-srv",
+              "type": "nodejs",
+              "path": "gen/srv",
+              "buildpack": "nodejs_buildpack",
+              "requires": [
+                "acme-incidents-auth",
+                "acme-incidents-db"
+              ]
+            },
+            {
+              "name": "acme-incidents-tools",
+              "type": "nodejs",
+              "path": "tools",
+              "buildpack": "https://github.com/acme/buildpack.git",
+              "requires": []
+            },
+            {
+              "name": "acme-incidents-db-deployer",
+              "type": "hdb",
+              "path": "gen/db",
+              "buildpack": "nodejs_buildpack",
+              "requires": [
+                "acme-incidents-db"
+              ]
+            }
+          ],
+          "resources": [
+            {
+              "name": "acme-incidents-auth",
+              "type": "org.cloudfoundry.managed-service",
+              "service": "xsuaa",
+              "plan": "application"
+            },
+            {
+              "name": "acme-incidents-db",
+              "type": "com.sap.xs.hdi-container",
+              "service": "hana",
+              "plan": "hdi-shared"
+            },
+            {
+              "name": "acme-incidents-destination",
+              "type": "org.cloudfoundry.managed-service",
+              "service": "destination",
+              "plan": "lite"
+            }
+          ]
+        },
+        "xsSecurity": [
+          {
+            "file": "mta.yaml",
+            "source": "mta.yaml",
+            "scopes": [
+              {
+                "name": "$XSAPPNAME.mta-only",
+                "grantedToApps": false
+              }
+            ],
+            "roleTemplates": [
+              {
+                "name": "MtaOnly",
+                "scopeReferences": [
+                  "$XSAPPNAME.mta-only"
+                ]
+              }
+            ],
+            "attributes": []
+          },
+          {
+            "file": "xs-security.json",
+            "source": "xs-security.json",
+            "scopes": [
+              {
+                "name": "$XSAPPNAME.admin",
+                "grantedToApps": false
+              },
+              {
+                "name": "$XSAPPNAME.support",
+                "grantedToApps": false
+              },
+              {
+                "name": "$XSAPPNAME.unused",
+                "grantedToApps": false
+              },
+              {
+                "name": "$XSAPPNAME.callback",
+                "grantedToApps": true
+              }
+            ],
+            "roleTemplates": [
+              {
+                "name": "admin",
+                "scopeReferences": [
+                  "$XSAPPNAME.admin"
+                ]
+              },
+              {
+                "name": "support",
+                "scopeReferences": [
+                  "$XSAPPNAME.support"
+                ]
+              },
+              {
+                "name": "Token_Exchange",
+                "scopeReferences": [
+                  "uaa.user"
+                ]
+              }
+            ],
+            "attributes": [
+              "region"
+            ]
+          }
+        ],
+        "xsApps": [
+          {
+            "file": "app/incidents/xs-app.json",
+            "authenticationMethod": "route",
+            "routes": [
+              {
+                "source": "^/odata/(.*)$",
+                "authenticationType": "xsuaa",
+                "csrfProtection": false,
+                "target": "destination",
+                "targetHint": "api",
+                "isLogoutPage": false
+              },
+              {
+                "source": "^/public/(.*)$",
+                "authenticationType": "none",
+                "csrfProtection": null,
+                "target": "destination",
+                "targetHint": "other",
+                "isLogoutPage": false
+              },
+              {
+                "source": "^/resources/(.*)$",
+                "authenticationType": "none",
+                "csrfProtection": null,
+                "target": "destination",
+                "targetHint": "ui5-cdn",
+                "isLogoutPage": false
+              },
+              {
+                "source": "^/-/cds/.*",
+                "authenticationType": "none",
+                "csrfProtection": null,
+                "target": "destination",
+                "targetHint": "api",
+                "isLogoutPage": false
+              },
+              {
+                "source": "^/logout.html$",
+                "authenticationType": "none",
+                "csrfProtection": null,
+                "target": "localDir",
+                "targetHint": "other",
+                "isLogoutPage": true
+              },
+              {
+                "source": "^(.*)$",
+                "authenticationType": "xsuaa",
+                "csrfProtection": null,
+                "target": "service",
+                "targetHint": "html5-repo",
+                "isLogoutPage": false
+              }
+            ]
+          }
+        ],
+        "cdsFiles": [
+          {
+            "file": "db/schema.cds",
+            "usings": [
+              {
+                "alias": "CodeList",
+                "target": "sap.common.CodeList"
+              }
+            ],
+            "services": [],
+            "entities": [
+              {
+                "name": "Customers",
+                "line": 10,
+                "fields": [
+                  "firstName",
+                  "lastName",
+                  "email",
+                  "phone",
+                  "creditCardNo",
+                  "remarks",
+                  "addresses",
+                  "incidents"
+                ],
+                "personalData": false,
+                "associations": [
+                  {
+                    "field": "addresses",
+                    "target": "Addresses"
+                  },
+                  {
+                    "field": "incidents",
+                    "target": "Incidents"
+                  }
+                ]
+              },
+              {
+                "name": "Addresses",
+                "line": 22,
+                "fields": [
+                  "customer",
+                  "city",
+                  "postCode",
+                  "streetAddress"
+                ],
+                "personalData": false,
+                "associations": [
+                  {
+                    "field": "customer",
+                    "target": "Customers"
+                  }
+                ]
+              },
+              {
+                "name": "Warehouses",
+                "line": 29,
+                "fields": [
+                  "name",
+                  "city",
+                  "postCode"
+                ],
+                "personalData": false,
+                "associations": []
+              },
+              {
+                "name": "Incidents",
+                "line": 35,
+                "fields": [
+                  "customer",
+                  "title",
+                  "status",
+                  "urgency",
+                  "conversation",
+                  "ID",
+                  "timestamp",
+                  "author",
+                  "message"
+                ],
+                "personalData": false,
+                "associations": [
+                  {
+                    "field": "customer",
+                    "target": "Customers"
+                  },
+                  {
+                    "field": "status",
+                    "target": "Status"
+                  }
+                ]
+              },
+              {
+                "name": "Status",
+                "line": 48,
+                "fields": [
+                  "code"
+                ],
+                "personalData": false,
+                "associations": []
+              }
+            ],
+            "annotates": []
+          },
+          {
+            "file": "srv/external/ExternalService.cds",
+            "usings": [],
+            "services": [
+              {
+                "name": "ExternalService",
+                "line": 3,
+                "requires": [],
+                "restrictTo": [],
+                "protocolNone": false,
+                "external": true,
+                "entities": [
+                  {
+                    "name": "Suppliers",
+                    "line": 4,
+                    "requires": [],
+                    "restrictTo": [],
+                    "readonly": false,
+                    "projectionOf": null
+                  }
+                ],
+                "actions": []
+              }
+            ],
+            "entities": [],
+            "annotates": []
+          },
+          {
+            "file": "srv/services.cds",
+            "usings": [
+              {
+                "alias": "db",
+                "target": "acme.incidents"
+              }
+            ],
+            "services": [
+              {
+                "name": "AdminService",
+                "line": 4,
+                "requires": [],
+                "restrictTo": [],
+                "protocolNone": false,
+                "external": false,
+                "entities": [
+                  {
+                    "name": "Customers",
+                    "line": 5,
+                    "requires": [],
+                    "restrictTo": [],
+                    "readonly": false,
+                    "projectionOf": "db.Customers"
+                  },
+                  {
+                    "name": "Incidents",
+                    "line": 6,
+                    "requires": [],
+                    "restrictTo": [],
+                    "readonly": false,
+                    "projectionOf": "db.Incidents"
+                  }
+                ],
+                "actions": [
+                  {
+                    "name": "fetchCustomer",
+                    "line": 7,
+                    "requires": [],
+                    "restrictTo": []
+                  }
+                ]
+              },
+              {
+                "name": "ProcessorService",
+                "line": 10,
+                "requires": [
+                  "support"
+                ],
+                "restrictTo": [],
+                "protocolNone": false,
+                "external": false,
+                "entities": [
+                  {
+                    "name": "Incidents",
+                    "line": 12,
+                    "requires": [],
+                    "restrictTo": [
+                      "auditor"
+                    ],
+                    "readonly": false,
+                    "projectionOf": "db.Incidents"
+                  },
+                  {
+                    "name": "Customers",
+                    "line": 13,
+                    "requires": [],
+                    "restrictTo": [],
+                    "readonly": true,
+                    "projectionOf": "db.Customers"
+                  }
+                ],
+                "actions": []
+              },
+              {
+                "name": "InternalService",
+                "line": 16,
+                "requires": [],
+                "restrictTo": [],
+                "protocolNone": true,
+                "external": false,
+                "entities": [
+                  {
+                    "name": "Warehouses",
+                    "line": 17,
+                    "requires": [],
+                    "restrictTo": [],
+                    "readonly": false,
+                    "projectionOf": "db.Warehouses"
+                  }
+                ],
+                "actions": []
+              }
+            ],
+            "entities": [],
+            "annotates": [
+              {
+                "target": "AdminService.Incidents",
+                "line": 20,
+                "personalData": false,
+                "requires": [],
+                "restrictTo": []
+              }
+            ]
+          }
+        ],
+        "seedData": [
+          {
+            "file": "db/data/acme.incidents-Customers.csv",
+            "columnCount": 7,
+            "headerRejected": false,
+            "rowsChecked": 2,
+            "sensitiveColumns": [
+              {
+                "column": "creditCardNo",
+                "kind": "card",
+                "rowsMatching": 1
+              }
+            ]
+          },
+          {
+            "file": "db/data/acme.incidents-Status.csv",
+            "columnCount": 3,
+            "headerRejected": false,
+            "rowsChecked": 3,
+            "sensitiveColumns": []
+          },
+          {
+            "file": "test/data/POISON-export.csv",
+            "columnCount": 0,
+            "headerRejected": true,
+            "rowsChecked": 0,
+            "sensitiveColumns": []
+          }
+        ],
+        "archives": [
+          {
+            "file": "mta_archives/acme-incidents_1.0.0.mtar",
+            "bytes": 64,
+            "ignored": false
+          }
+        ],
+        "html": [
+          {
+            "file": "app/incidents/webapp/index.html",
+            "line": 7,
+            "src": "https://ui5.example.com/resources/sap-ui-core.js",
+            "external": true,
+            "integrity": false,
+            "versionForm": "latest",
+            "testPage": false
+          },
+          {
+            "file": "app/incidents/webapp/test/flpSandbox.html",
+            "line": 9,
+            "src": "https://ui5.example.com/1.120.0/resources/sap-ui-core.js",
+            "external": true,
+            "integrity": false,
+            "versionForm": "specific",
+            "testPage": true
+          },
+          {
+            "file": "app/launchpage.html",
+            "line": 6,
+            "src": "https://cdn.example.com/1.120/resources/sap-ui-core.js",
+            "external": true,
+            "integrity": false,
+            "versionForm": "evergreen",
+            "testPage": false
+          }
+        ]
+      }
+    ]
+  },
+  "apps": [
+    {
+      "guid": "project:acme-incidents",
+      "name": "acme-incidents",
+      "org": "local",
+      "space": "project",
+      "kind": "project",
+      "state": null,
+      "lifecycleType": "unknown",
+      "stack": null,
+      "buildpacks": [
+        {
+          "name": "nodejs_buildpack",
+          "version": null
+        }
+      ],
+      "createdAt": null,
+      "updatedAt": null,
+      "lastDeployAt": null,
+      "findingCounts": {
+        "critical": 1,
+        "high": 0,
+        "medium": 1,
+        "low": 1,
+        "info": 0
+      },
+      "highestSeverity": "critical",
+      "riskScore": 106
+    }
+  ],
+  "findings": [
+    {
+      "id": "CAP_MOCKED_AUTH_IN_PROD",
+      "severity": "critical",
+      "title": "Mocked authentication is configured for production",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "requires.auth",
+        "authKind": "mocked",
+        "sourcesRead": [
+          ".cdsrc.yaml",
+          ".cdsrc.json",
+          "package.json"
+        ],
+        "sourcesNotRead": [
+          ".cdsrc-private.json",
+          ".cdsrc.js",
+          ".env",
+          "CDS_* environment variables"
+        ],
+        "impact": "severe",
+        "easeOfAttack": "easy"
+      },
+      "remediation": "Configure a production authentication strategy, for example in package.json: `\"cds\": { \"requires\": { \"[production]\": { \"auth\": \"xsuaa\" } } }` (or `\"ias\"`), bind the app to an XSUAA or IAS instance, and keep `mocked` and its users under `[development]` only. Verify the result with `cds env get requires.auth --profile production`.",
+      "references": [
+        "https://cap.cloud.sap/docs/node.js/authentication",
+        "https://cap.cloud.sap/docs/node.js/cds-env",
+        "https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/"
+      ],
+      "location": {
+        "file": "package.json"
+      }
+    },
+    {
+      "id": "CAP_AUDITLOG_MISSING",
+      "severity": "medium",
+      "title": "Fields that look like personal data are modelled but audit logging is not set up",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "requires.audit-log",
+        "personalDataDeclared": false,
+        "declaredEntities": 0,
+        "inferredEntities": 2,
+        "legacyLibrary": false,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Annotate the entities that hold personal data with `@PersonalData` (`EntitySemantics` and `DataSubjectRole` on the entity; `FieldSemantics`, `IsPotentiallyPersonal` or `IsPotentiallySensitive` on the elements), then add the `@cap-js/audit-logging` plugin with `cds add audit-logging`: it configures `cds.requires.audit-log` with console output in development and the SAP Audit Log service (`audit-log-to-restv2`) in production, and adds an `auditlog` resource to mta.yaml. Create an SAP Audit Log service instance (service `auditlog`, plan `premium`) in the target space and bind it to the app. The plugin logs only entities annotated with `@PersonalData`, so keep those annotations complete. Verify with `cds env requires.audit-log --profile production`.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/dpp-audit-logging",
+        "https://cap.cloud.sap/docs/guides/security/dpp-annotations",
+        "https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/"
+      ],
+      "location": {
+        "file": "package.json"
+      }
+    },
+    {
+      "id": "CAP_MOCKED_USER_PASSWORD",
+      "severity": "low",
+      "title": "Mocked users carry passwords in the development configuration",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "requires.auth.users",
+        "view": "development",
+        "usersWithPassword": 1,
+        "mockedUsers": 2,
+        "authKind": "mocked",
+        "impact": "minor",
+        "easeOfAttack": "complex"
+      },
+      "remediation": "Delete the `password` values from the mocked users in `cds.requires.auth.users` and keep the `users` block under `[development]` only, so it never applies to production. A developer who needs a password-protected local login can define it in `.cdsrc-private.json`, which cds reads but which must stay out of version control. If any of these passwords was ever reused on another system, change it there.",
+      "references": [
+        "https://cap.cloud.sap/docs/node.js/authentication#mocked",
+        "https://cap.cloud.sap/docs/node.js/cds-env",
+        "https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/"
+      ],
+      "location": {
+        "file": "package.json"
+      }
+    }
+  ]
+}

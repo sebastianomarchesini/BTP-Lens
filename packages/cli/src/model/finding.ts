@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { RelativePathSchema } from './paths.js';
 import { SeveritySchema } from './severity.js';
 
 export const AppRefSchema = z.object({
@@ -8,6 +9,13 @@ export const AppRefSchema = z.object({
   org: z.string(),
 });
 export type AppRef = z.infer<typeof AppRefSchema>;
+
+/** Where in a scanned project a finding is: a project-relative file and, when known, a line. */
+export const FindingLocationSchema = z.object({
+  file: RelativePathSchema,
+  line: z.number().int().positive().optional(),
+});
+export type FindingLocation = z.infer<typeof FindingLocationSchema>;
 
 export const FindingSchema = z.object({
   /** Stable rule id, e.g. "RUNTIME_NODE_EOL". */
@@ -20,5 +28,7 @@ export const FindingSchema = z.object({
   /** Concrete next step. */
   remediation: z.string(),
   references: z.array(z.url()),
+  /** Set by project rules only; CF findings have no file. */
+  location: FindingLocationSchema.optional(),
 });
 export type Finding = z.infer<typeof FindingSchema>;
