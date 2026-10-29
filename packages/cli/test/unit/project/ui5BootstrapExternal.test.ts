@@ -241,6 +241,16 @@ describe('UI5_BOOTSTRAP_EXTERNAL', () => {
     expect(findings[0]!.location).toEqual({ file: INDEX, line: 9 });
   });
 
+  it('picks the lower src when two equal bootstraps share a line, whatever the collected order', () => {
+    const a = htmlBootstrap(INDEX, 'https://a.example.com/resources/sap-ui-core.js', { line: 1 });
+    const b = htmlBootstrap(INDEX, 'https://b.example.com/resources/sap-ui-core.js', { line: 1 });
+    const forward = runRule(ui5BootstrapExternal, project([a, b]));
+    const backward = runRule(ui5BootstrapExternal, project([b, a]));
+    expect(forward).toHaveLength(1);
+    expect(forward[0]!.evidence.host).toBe('a.example.com');
+    expect(backward).toEqual(forward);
+  });
+
   it('ignores a protected bootstrap in a file whose other bootstrap is unprotected', () => {
     const findings = runRule(
       ui5BootstrapExternal,
@@ -306,16 +316,21 @@ describe('UI5_BOOTSTRAP_EXTERNAL', () => {
   });
 
   it('is deterministic', () => {
-    expectDeterministic(
-      ui5BootstrapExternal,
-      project([
-        htmlBootstrap('app/z/index.html', LATEST, { line: 20 }),
-        htmlBootstrap('app/z/index.html', SPECIFIC, { line: 4, versionForm: 'specific' }),
-        htmlBootstrap(SANDBOX, LATEST, { testPage: true }),
-        htmlBootstrap(INDEX, RELATIVE),
-        htmlBootstrap('app/a/index.html', EVERGREEN, { versionForm: 'evergreen' }),
-      ]),
+    const html = [
+      htmlBootstrap('app/z/index.html', LATEST, { line: 20 }),
+      htmlBootstrap('app/z/index.html', SPECIFIC, { line: 4, versionForm: 'specific' }),
+      htmlBootstrap(SANDBOX, LATEST, { testPage: true }),
+      htmlBootstrap(INDEX, RELATIVE),
+      htmlBootstrap('app/a/index.html', EVERGREEN, { versionForm: 'evergreen' }),
+    ];
+    expectDeterministic(ui5BootstrapExternal, project(html));
+    expect(runRule(ui5BootstrapExternal, project([...html].reverse()))).toEqual(
+      runRule(ui5BootstrapExternal, project(html)),
     );
+  });
+
+  it('never derives a host from a value that is not an absolute URL', () => {
+    for (const value of POISON) expect(bootstrapHost(value), value).toBeNull();
   });
 
   it('copies nothing from the project but the file name and the CDN host', () => {

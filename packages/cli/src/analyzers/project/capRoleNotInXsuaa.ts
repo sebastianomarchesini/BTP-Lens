@@ -1,6 +1,6 @@
 import type { Finding, FindingLocation } from '../../model/finding.js';
 import { owaspUrl } from '../../model/owasp.js';
-import type { RawProject } from '../../model/raw.js';
+import type { RawProject, RawXsSecurity } from '../../model/raw.js';
 import { type Analyzer, type AnalyzerContext, ruleHelpUri } from '../types.js';
 import { referencedRoles } from './cdsModel.js';
 import { type MatrixSeverity, projectFinding } from './support.js';
@@ -45,6 +45,17 @@ function usesAms(project: RawProject): boolean {
   return hasDependency(project, AMS_PACKAGE) || project.cds.effective.production.authKind === 'ams';
 }
 
+/**
+ * A descriptor with neither scopes nor role templates says nothing about
+ * roles: `cds add xsuaa` writes `config: { xsappname, tenant-mode }` into
+ * mta.yaml next to `path: ./xs-security.json`, and when that file is
+ * generated at build time or ignored, the inline block is all the collector
+ * sees. Comparing against it would report every role.
+ */
+function declaresAuthorization(descriptor: RawXsSecurity): boolean {
+  return descriptor.scopes.length > 0 || descriptor.roleTemplates.length > 0;
+}
+
 /** Every scope name in every descriptor, from xs-security.json files and mta.yaml xsuaa resources. */
 function definedScopes(project: RawProject): Set<string> {
   return new Set(project.xsSecurity.flatMap((descriptor) => descriptor.scopes.map((s) => s.name)));
@@ -54,35 +65,33 @@ function hasScope(scopes: Set<string>, role: string): boolean {
   return scopes.has(role) || scopes.has(`${XSAPPNAME_PREFIX}${role}`);
 }
 
+/** Code-point order, like the collector's file lists, so the evidence is the same in every locale. */
 function sortedUnique(values: string[]): string[] {
-  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+  return [...new Set(values)].sort();
 }
 
-function compareLocations(a: FindingLocation, b: FindingLocation): number {
-  return a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0);
-}
-
-/** Where the role is first named in the model (file order, then line): the place to fix a typo. */
+/**
+ * Where the role is first named: the first file in the collector's order
+ * (code-point sorted paths), then the lowest line among the service, its
+ * entities, its actions and the annotate statements. The place to fix a typo.
+ */
 function firstReference(project: RawProject, role: string): FindingLocation | undefined {
   const names = (holder: { requires: string[]; restrictTo: string[] }): boolean =>
     holder.requires.includes(role) || holder.restrictTo.includes(role);
-  const locations: FindingLocation[] = [];
   for (const file of project.cdsFiles) {
-    for (const service of file.services) {
-      const members = [service, ...service.entities, ...service.actions];
-      for (const member of members)
-        if (names(member)) locations.push({ file: file.file, line: member.line });
-    }
-    for (const annotate of file.annotates) {
-      if (names(annotate)) locations.push({ file: file.file, line: annotate.line });
-    }
+    const holders = [
+      ...file.services.flatMap((service) => [service, ...service.entities, ...service.actions]),
+      ...file.annotates,
+    ];
+    const lines = holders.filter(names).map((holder) => holder.line);
+    if (lines.length > 0) return { file: file.file, line: Math.min(...lines) };
   }
-  return locations.sort(compareLocations)[0];
+  return undefined;
 }
 
 /** Referenced roles without a scope, sorted; none when there is no descriptor to check against. */
 function missingRoles(project: RawProject): string[] {
-  if (project.xsSecurity.length === 0 || usesAms(project)) return [];
+  if (!project.xsSecurity.some(declaresAuthorization) || usesAms(project)) return [];
   const scopes = definedScopes(project);
   return referencedRoles(project).filter((role) => !hasScope(scopes, role));
 }
@@ -110,7 +119,8 @@ function findingFor(context: AnalyzerContext, project: RawProject, role: string)
  * scope `$XSAPPNAME.<role>` (or `<role>`) in any XSUAA descriptor of the
  * project, so nobody can ever hold it: the restriction either locks every
  * user out or, when the name is a typo, is not the one that applies. Skipped
- * when the project has no descriptor or takes its roles from AMS policies.
+ * when no descriptor declares scopes or role templates, or the project takes
+ * its roles from AMS policies.
  * See docs/rules.md.
  */
 export const capRoleNotInXsuaa: Analyzer = {

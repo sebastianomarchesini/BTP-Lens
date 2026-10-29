@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { type BrowserContext, type Page, expect, test } from '@playwright/test';
+import { type Page, expect, test } from '@playwright/test';
+import { isolate } from './isolate.js';
 
 /**
  * The HTML report must open from disk with no network access (docs/data-sources.md §5).
@@ -9,26 +10,6 @@ import { type BrowserContext, type Page, expect, test } from '@playwright/test';
 const REPORT = pathToFileURL(
   resolve(import.meta.dirname, '../reports/sample/btp-lens-report.html'),
 ).href;
-
-const LOCAL = /^(file|data|blob):/;
-
-/** Blocks every non-local request and records it, so the test can fail on any. */
-async function isolate(context: BrowserContext, page: Page) {
-  const external: string[] = [];
-  const errors: string[] = [];
-  await context.route('**/*', (route) => {
-    const url = route.request().url();
-    if (LOCAL.test(url)) return route.continue();
-    external.push(url);
-    return route.abort('internetdisconnected');
-  });
-  await context.setOffline(true);
-  page.on('pageerror', (error) => errors.push(error.message));
-  page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text());
-  });
-  return { external, errors };
-}
 
 async function background(page: Page): Promise<string> {
   return page.evaluate(() => getComputedStyle(document.body).backgroundColor);

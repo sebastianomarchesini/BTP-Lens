@@ -51,9 +51,23 @@ export function seedSubject(file: string, column: string): string {
 }
 
 /*
+ * Which of two entries for one subject to report: the worst case first (more
+ * matching rows, then more rows checked), then the kind in code-point order.
+ * The order is total, so a snapshot that lists one subject twice yields the
+ * same finding whatever the order of its entries.
+ */
+function outranks(candidate: SensitiveSeed, known: SensitiveSeed): boolean {
+  return (
+    (candidate.column.rowsMatching - known.column.rowsMatching ||
+      candidate.rowsChecked - known.rowsChecked ||
+      compareText(known.column.kind, candidate.column.kind)) > 0
+  );
+}
+
+/*
  * One entry per (file, column) with at least one matching value. A header
  * that repeats a column name yields two collector entries for one subject;
- * the one with more matching rows is kept, so the evidence states the worst case.
+ * the one that `outranks` the other is kept, so the evidence states the worst case.
  */
 function sensitiveSeeds(project: RawProject): SensitiveSeed[] {
   const bySubject = new Map<string, SensitiveSeed>();
@@ -61,10 +75,9 @@ function sensitiveSeeds(project: RawProject): SensitiveSeed[] {
     for (const column of seed.sensitiveColumns) {
       if (column.rowsMatching === 0) continue;
       const subject = seedSubject(seed.file, column.column);
+      const candidate = { subject, file: seed.file, column, rowsChecked: seed.rowsChecked };
       const known = bySubject.get(subject);
-      if (known === undefined || known.column.rowsMatching < column.rowsMatching) {
-        bySubject.set(subject, { subject, file: seed.file, column, rowsChecked: seed.rowsChecked });
-      }
+      if (known === undefined || outranks(candidate, known)) bySubject.set(subject, candidate);
     }
   }
   return [...bySubject.values()].sort(

@@ -168,6 +168,19 @@ describe('CAP_SERVICE_NO_RESTRICTION', () => {
       },
     );
 
+    it('is critical under mocked authentication even when restrict_all_services is true', () => {
+      // The acme-incidents fixture shape: mocked users still log in without a password.
+      const finding = runRule(
+        capServiceNoRestriction,
+        project([openService()], {
+          cds: cdsEffective('production', { authKind: 'mocked', restrictAllServices: true }),
+        }),
+      )[0]!;
+      expect(finding.severity).toBe('critical');
+      expect(finding.title).toBe('Service is open to everyone');
+      expect(finding.evidence).toMatchObject({ authKind: 'mocked', restrictAllServices: true });
+    });
+
     it.each(['jwt', 'xsuaa', 'ias', 'ams', 'other'] as const)(
       'stays high under production authentication %s',
       (authKind) => {
@@ -267,6 +280,37 @@ describe('CAP_SERVICE_NO_RESTRICTION', () => {
       ]);
     });
 
+    it('when the restriction is inherited from the projected db entity through an annotate', () => {
+      // CAP propagates a db entity's restriction to the service entities projecting on it.
+      const projecting = (projectionOf: string, usings: RawCdsFile['usings'] = []) =>
+        cdsFile('srv/catalog.cds', {
+          usings,
+          services: [
+            service('CatalogService', {
+              entities: [serviceEntity('Books', { projectionOf })],
+            }),
+          ],
+        });
+      none([
+        projecting('db.Books'),
+        cdsFile('db/schema.cds', { entities: [entity('Books', ['title'])] }),
+        cdsFile('db/auth.cds', { annotates: [annotate('db.Books', { restrictTo: ['buyer'] })] }),
+      ]);
+      none([
+        projecting('db.Books', [{ alias: 'db', target: 'acme.db' }]),
+        cdsFile('db/auth.cds', {
+          annotates: [annotate('acme.db.Books', { requires: ['buyer'] })],
+        }),
+      ]);
+      none([
+        projecting('acme.db.Books'),
+        cdsFile('db/auth.cds', {
+          usings: [{ alias: 'schema', target: 'acme.db' }],
+          annotates: [annotate('schema.Books', { restrictTo: ['buyer'] })],
+        }),
+      ]);
+    });
+
     it('for an internal service (@protocol: none)', () => {
       none([openService({ protocolNone: true })]);
     });
@@ -284,6 +328,30 @@ describe('CAP_SERVICE_NO_RESTRICTION', () => {
       none([]);
       none([cdsFile('db/schema.cds', { entities: [entity('Books', ['title'])] })]);
     });
+  });
+
+  it('still fires when a restricting annotate targets a db entity the service does not project on', () => {
+    const files = [
+      cdsFile('srv/catalog.cds', {
+        services: [
+          service('CatalogService', {
+            entities: [
+              serviceEntity('Books', { projectionOf: 'db.Books' }),
+              serviceEntity('Notes'),
+            ],
+          }),
+        ],
+      }),
+      cdsFile('db/auth.cds', {
+        annotates: [
+          annotate('db.Orders', { restrictTo: ['buyer'] }),
+          annotate('db.Books', { personalData: true }),
+        ],
+      }),
+    ];
+    expect(subjects(runRule(capServiceNoRestriction, project(files)))).toEqual([
+      ['CatalogService', 'high'],
+    ]);
   });
 
   it('does not exempt a service just because its file name mentions external', () => {
@@ -353,6 +421,26 @@ describe('CAP_SERVICE_NO_RESTRICTION', () => {
     expect(finding.remediation).toContain('@requires');
     expect(finding.remediation).toContain('@restrict');
     expect(finding.remediation).toContain('@readonly');
+  });
+
+  it('emits the same findings whatever the order of files and services', () => {
+    const files = [
+      cdsFile('srv/z.cds', {
+        services: [service('Zeta', { actions: [action('go')] }), service('Alpha')],
+      }),
+      cdsFile('srv/a.cds', { services: [service('Beta', { entities: [serviceEntity('X')] })] }),
+    ];
+    const reversed = files
+      .slice()
+      .reverse()
+      .map((file) => ({ ...file, services: file.services.slice().reverse() }));
+    const findings = runRule(capServiceNoRestriction, project(files));
+    expect(runRule(capServiceNoRestriction, project(reversed))).toEqual(findings);
+    expect(subjects(findings)).toEqual([
+      ['Beta', 'high'],
+      ['Zeta', 'high'],
+      ['Alpha', 'medium'],
+    ]);
   });
 
   it('is deterministic', () => {

@@ -59,10 +59,14 @@ function isUnpinned(bootstrap: RawHtmlBootstrap): boolean {
   return bootstrap.versionForm === 'latest' && !bootstrap.testPage;
 }
 
-/** The unpinned one wins; among equals the first in the file. */
+/**
+ * The unpinned one wins; among equals the first in the file, and on one line
+ * the lower src, so the pick never depends on the order the collector emitted.
+ */
 function moreSevere(a: RawHtmlBootstrap, b: RawHtmlBootstrap): boolean {
   if (isUnpinned(a) !== isUnpinned(b)) return isUnpinned(a);
-  return a.line < b.line;
+  if (a.line !== b.line) return a.line < b.line;
+  return a.src.localeCompare(b.src) < 0;
 }
 
 /** One bootstrap per file: the worst of those loaded externally without integrity, sorted by file. */

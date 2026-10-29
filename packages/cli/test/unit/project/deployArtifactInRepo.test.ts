@@ -189,6 +189,52 @@ describe('DEPLOY_ARTIFACT_IN_REPO', () => {
     expect(findings[0]!.evidence).toMatchObject({ subject: ARCHIVE, bytes: 1 });
   });
 
+  it('still fires once when an ignored entry for the same file comes first', () => {
+    const findings = runRule(
+      deployArtifactInRepo,
+      project([archive(ARCHIVE, { bytes: 1, ignored: true }), archive(ARCHIVE, { bytes: 2 })]),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.evidence).toMatchObject({ subject: ARCHIVE, bytes: 2, ignored: false });
+  });
+
+  it('yields the same findings when archives and projects arrive in reverse order', () => {
+    const archives = [
+      archive('mta_archives/zeta_1.0.0.mtar', { bytes: 3 }),
+      archive('alpha.mtar', { bytes: 1, ignored: true }),
+      archive('mta_archives/beta_1.0.0.mtar', { bytes: 2 }),
+    ];
+    const projects = [
+      project(archives, { repository: true }),
+      rawProject({ id: 'other', repository: false, archives }),
+    ];
+    const expected = runRule(deployArtifactInRepo, ...projects);
+    expect(expected).toHaveLength(4);
+    const reversed = projects.map((p) => ({ ...p, archives: [...p.archives].reverse() })).reverse();
+    expect(runRule(deployArtifactInRepo, ...reversed)).toEqual(expected);
+  });
+
+  it('produces schema-valid findings in both severity branches', () => {
+    const findings = runRule(
+      deployArtifactInRepo,
+      project([archive(ARCHIVE)], { repository: true }),
+      rawProject({ id: 'other', repository: false, archives: [archive('other.mtar')] }),
+    );
+    expect(findings.map((f) => f.severity)).toEqual(['medium', 'low']);
+    for (const finding of findings) {
+      expect(FindingSchema.safeParse(finding).success).toBe(true);
+      expect(Object.keys(finding.evidence).sort()).toEqual([
+        'bytes',
+        'easeOfAttack',
+        'ignored',
+        'impact',
+        'repository',
+        'subject',
+        'tracked',
+      ]);
+    }
+  });
+
   it('reports each project on its own, with the severity of its own repository flag', () => {
     const findings = runRule(
       deployArtifactInRepo,

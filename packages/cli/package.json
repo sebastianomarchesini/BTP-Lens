@@ -29,7 +29,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "coverage": "vitest run --coverage",
-    "sample": "node dist/cli.js report --from test/fixtures/sample-snapshot.json --format html,json,csv,sarif --out ../../reports/sample",
+    "sample": "node dist/cli.js report --from test/fixtures/sample-snapshot.json --format html,json,csv,sarif --out ../../reports/sample && node dist/cli.js report --from test/fixtures/sample-project-snapshot.json --format html,json,csv,sarif --out ../../reports/sample-project",
     "prepack": "node scripts/prepack.mjs"
   },
   "dependencies": {

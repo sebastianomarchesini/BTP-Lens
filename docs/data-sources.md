@@ -94,6 +94,7 @@ All endpoints are **GET**. "SA" = Space Auditor; "SD" = Space Developer.
 | Inventory, droplets, processes, stats, buildpacks, stacks, routes, bindings metadata, audit events | Space Auditor (or Org Auditor for org-level audit events) | on |
 | App usage events | ⚠️ unconfirmed on BTP | on, skips on 403 |
 | `ENV_SECRET_PLAINTEXT` | Space Developer **or Space Supporter** | `--deep` only |
+| `collect.project` and the project rules (§8) | **no CF role**: local files only, no network | on, for `btp-lens project` only |
 
 > **Least-privilege finding:** Space Supporter can also read `/environment_variables`, and on paper it is a narrower role than Space Developer (it cannot push apps or manage services). However, Space Supporter can restart and scale apps, so it is **not** read-only either. We document both and recommend neither for routine scans.
 
@@ -203,3 +204,68 @@ Any other host, or any other method, throws `EgressDeniedError` before `fetch` r
 - **D2: both roles documented for `--deep`.** Space Developer or Space Supporter can read `/environment_variables`. `permissions.md` notes that Supporter is narrower but can still restart and scale apps.
 - **D3: route probe on by default.** One unauthenticated GET per app, 5 s timeout, no redirects. `--no-probe-routes` turns it off.
 - **D4: dedicated repository.** BTP Lens lives at the root of [`sebastianomarchesini/BTP-Lens`](https://github.com/sebastianomarchesini/BTP-Lens) as an npm-workspaces monorepo (`packages/cli`, `packages/ui`).
+
+---
+
+## 8. Local project files (`btp-lens project`)
+
+`btp-lens project --path <dir>` is a second scan target: a local CAP or MTA project directory, read from the file system only. The collector (`packages/cli/src/collectors/project/`) makes **no network request**, starts **no child process** and never runs `git`; a static test (`test/unit/project/noEgress.test.ts`) fails if any file under the collector, the project rules or `src/project.ts` imports `child_process`, `http`, `https`, `net`, `dns` or `worker_threads`, or contains `fetch(` or a dynamic `import(`. The rules are listed in [rules.md](rules.md#project-rules). Verified 2026-10-29 against the sources named below.
+
+### 8.1 The root
+
+- `--path` is resolved with `realpath` and must be a directory that contains at least one of `package.json`, `mta.yaml`, `mta.yml`, `.cdsrc.json` or `.cdsrc.yaml`; otherwise the command stops with exit code 2. Every error about the root repeats the user's own `--path` argument and a fixed sentence per error code (`does not exist`, `is not a folder`, `cannot be read: permission denied`, `is a symbolic link loop`, `cannot be read`); the real path and the system message are never printed.
+- After the root check no error escapes: a file that cannot be read or parsed becomes an `unreadable: { file, kind }` entry (`json`, `yaml`, `csv`, `cds`, `html`, `binary`, `too-large`) and the scan continues. A YAML document with syntax errors counts as unreadable (`yaml` is run with `prettyErrors: false`, `logLevel: 'silent'`, `maxAliasCount: 100`, `uniqueKeys: false` through `parseDocument`, and a document with errors is dropped, because with a silent log level `YAML.parse` would return a best-effort value instead of throwing). Check reasons therefore never carry a path, a line number or file content.
+
+### 8.2 The walk
+
+- `lstat` only; only regular files and directories are visited. Symbolic links, FIFOs, sockets and devices are skipped and never listed.
+- Skipped directories: `node_modules`, `.git`, `gen`, `dist`, `dist-report`, `target`, `build`, `coverage`, `.vscode`, `.idea`, every directory whose name starts with `.` (except the root), and the resolved `--out` directory.
+- Limits: depth 12; 20 000 directory entries visited; 2 000 files opened; 64 MiB read in total; 500 file names listed in `files[]`; 200 unreadable entries. Beyond a limit the walk stops and `filesTruncated` is `true`.
+- Paths are stored relative to the root with `/` separators and must pass `isSafeRelativePath` (`packages/cli/src/model/paths.ts`: 1–512 characters, no `\`, NUL, CR or LF, not rooted, no `.`, `..` or empty segment); anything else is dropped.
+
+### 8.3 Files read (allow-list) and never read (deny-list)
+
+| Read | How |
+| --- | --- |
+| Root `package.json` | `name`, `dependencies` and `devDependencies` (names and version ranges; a range that is not a registry range becomes `[non-registry]`), `engines.node`, and the `cds` block as a configuration source. Nothing else (`author`, `repository`, `scripts`, …). |
+| Root `.cdsrc.json`, root `.cdsrc.yaml` | as configuration sources (§8.4). |
+| Root `mta.yaml` / `mta.yml` | `ID`, `modules[].{name,type,path,requires[].name,parameters.buildpack}` (buildpack through the same credential and query stripping as CF buildpack URLs), `resources[].{name,type,parameters.service,parameters.service-plan}`, and for resources with `parameters.service: xsuaa` the `parameters.config.scopes[].{name,granted-apps,grant-as-authority-to-apps}` and `role-templates[].{name,scope-references}` as a security descriptor with source `mta.yaml`. Never: `properties`, `build-parameters`, `hooks`, `provides`, `service-key`, destinations, any other `config.*`. |
+| Any `xs-security.json` | `scopes[].{name,granted-apps,grant-as-authority-to-apps}`, `role-templates[].{name,scope-references}`, `attributes[].name`. Never: `description`, `oauth2-configuration`, `foreign-scope-references`, `authorities`, `xsappname`, `tenant-mode`. |
+| Any `xs-app.json` | `authenticationMethod`, `logout.logoutPage` (only to flag the logout route), `routes[].{source,authenticationType,csrfProtection}` and which of `destination` / `service` / `localDir` is present, plus a hint computed from the destination or service name (`ui5-cdn`, `html5-repo`, `api`, `other`); the name itself is not stored. Never: `target`, `scope`, `httpMethods`, `cacheControl`, `identityProvider`, … |
+| `*.cds` | after stripping comments and string literals: `using … as` aliases, `service`, `entity` (with element names, `Association to` / `Composition of` targets, `as projection on` targets), `action` / `function` and `annotate` statements; of the annotations only the string values of `requires` and of `to` inside `restrict`, and the presence of `@readonly`, `@protocol: 'none'`, `@cds.external` and `@PersonalData`. Never: `where`, `grant`, `@title`, `@assert.*`, `@Common.*`, i18n keys, element types, defaults. Caps per file: 500 services, 2 000 entities, 200 elements per entity, 2 000 annotates; the regexes have no nested quantifiers (a ReDoS test runs a 2 MiB hostile file under 2 s). |
+| `*.csv` under a directory named `data` or `csv`, and `test/data` | the header (accepted only when every field is identifier-shaped and there are at most 200 fields, else `headerRejected`) and the first 200 data rows, checked value by value for the sensitive column patterns of `SEED_DATA_SENSITIVE`; only the matching column names, the kind and the match counts are kept, never a cell value or the other header names. |
+| `*.html` | the `<script>` tags with `id="sap-ui-bootstrap"` or a `src` ending in `sap-ui-core.js` (a simple attribute tokenizer; a start tag is read up to 16 KiB; at most 200 bootstraps per file and per project). The `src` is reduced to origin and path (at most 200 characters; user info, query and fragment dropped; other schemes become `[non-http]`); `integrity` is recorded as present or absent, never its value. |
+| Root `.gitignore` and the `.gitignore` files on the path of a `*.mtar` | only to decide whether an archive is ignored: comments, blank lines, `!` negation, leading `/`, trailing `/`, `*`, `?`, `**`, character classes, patterns without `/` at any depth, last match wins. A glob-to-table matcher, not generated regexes (a hostile pattern cannot stall the scan); patterns over 1 024 characters and beyond 2 000 rules per file are ignored. `.git/info/exclude` and global excludes are not read. |
+| `*.mtar` | `lstat` only (name and size); never opened. |
+| `<root>/.git` | `lstat` only, to set `repository`; never read. |
+
+**Never opened and never listed** (checked before the allow-list, with a unit test): `.cdsrc-private.json`, `.cdsrc.js`, `default-env.json`, `.env` and every name starting with `.env`, `*.mtaext`, `*-key.json`, `*.pem`, `*.key`, `*.http`, `manifest.json`, `*.md`, and every other file name.
+
+**Read:** `fs.open` with `O_RDONLY | O_NOFOLLOW`, `fstat` must report a regular file of at most 2 MiB (else `unreadable: too-large`), at most 2 MiB are read, and a NUL byte in the first 8 KiB marks the file `binary`.
+
+### 8.4 cds configuration sources ✅
+
+Verified from the "Sources for cds.env" table of `node.js/cds-env.md` in the `cap-js/docs` GitHub mirror (`cap.cloud.sap` does not resolve from the build environment), lowest priority first:
+
+| Order | Source | BTP Lens |
+| --- | --- | --- |
+| 1 | `@sap/cds` defaults | not needed: `null` means "the default" and every rule treats it as such (production auth defaults to `jwt`) |
+| 2 | `~/.cdsrc.json` | never read (outside the project) |
+| 3 | `./.cdsrc.yaml`, `./.cdsrc.json`, `./.cdsrc.js` | `.cdsrc.yaml` then `.cdsrc.json` are read; `.cdsrc.js` is code and is never read |
+| 4 | `./package.json#cds` | read |
+| 5 | `./.cdsrc-private.json` | never read (credentials) |
+| 6 | `default-env.json` (deprecated) | never read (credentials) |
+| 7 | `.env`, `.<profile>.env` | never read (credentials) |
+| 8 | `CDS_CONFIG`, `CDS_*` process environment | never read |
+| 9 | `VCAP_SERVICES`, `~/.cds-services.json` | never read |
+
+The three sources read are deep-merged in that order (a string under `requires` merged with an object is treated as cds' `{ kind }` shorthand), then for each of the two views `development` and `production` the `[view]` blocks are applied at every nesting level, followed by the `[view!]` blocks; other profiles are ignored. Of the merged result only `requires.auth` (string or `.kind`), the number of keys of `requires.auth.users` and how many of them have a `password` key, `requires.auth.restrict_all_services` and `requires['audit-log']` (string or `.kind`, and whether it is present) are kept; unknown strategy and kind strings become `other`; the legacy spellings `mocked-auth`, `basic-auth` and `dummy-auth` are normalised. `sourcesRead` records which of the three files existed. Consequence for every rule: the findings reflect the committed configuration; the higher-priority sources can change the effective value at runtime, and each rule says so in its limits.
+
+### 8.5 Other sources verified for the project rules
+
+- CAP authentication strategies, the pre-defined mock users and `restrict_all_services` (`node.js/authentication.md`), `@requires` / `@restrict`, the implicit `authenticated-user` requirement and the propagation of restrictions to projections (`guides/security/authorization.md`), the XSUAA role mapping and the merge of the inline `mta.yaml` config with `xs-security.json` (`guides/security/cap-users.md`), `@PersonalData` and the audit-logging plugin (`guides/security/dpp-annotations.md`, `guides/security/dpp-audit-logging.md`), initial data folders (`guides/databases/initial-data.md`): all from the `cap-js/docs` GitHub mirror. The former `guides/data-privacy/*` paths no longer exist there.
+- `@cap-js/audit-logging` binding resolution (`vcap.label: auditlog` for restv2, binding name `auditlog-ng` for alsng; `[production]` defaults to restv2) from the `cap-js/audit-logging` repository; what `cds add audit-logging`, `cds add approuter`, `cds add app-frontend`, `cds add html5-repo` and `cds add workzone-standard` write from the `@sap/cds-dk` 10.2.0 tarball on the npm registry (`lib/init/template/*`); `@sap/cds` loads plugins from `devDependencies` only while `NODE_ENV` is not `production` (`lib/plugins.js`).
+- Application router `authenticationType`, `authenticationMethod`, `csrfProtection` (default `true`, applied to every method other than `GET` and `HEAD` on non-public routes) and the logout route from the `SAP-docs/btp-cloud-platform` mirror (`docs/30-development/routes-666eb55.md`, `routing-configuration-file-c103fb4.md`, `application-router-configuration-c19f165.md`, `authenticationmethod-ff58bb0.md`, `logout-2296b4d.md`); the security descriptor syntax (`$XSAPPNAME` prefix, `scope-references`, `granted-apps`, `grant-as-authority-to-apps`, `authorities`) from `application-security-descriptor-configuration-syntax-517895a.md`; MTA archives from `multitarget-applications-in-the-cloud-foundry-environment-d04fc0e.md`; the Audit Log service name and plan from `audit-log-write-api-for-customers-64e99bb.md`.
+- SAPUI5 CDN URL forms (specific, evergreen, unversioned) and the CDN removal one year after end of maintenance (SAP Note 3001696) from the `SAP-docs/sapui5` mirror (`docs/04_Essentials/variant-for-bootstrapping-from-content-delivery-network-2d3eb2f.md`, `bootstrapping-loading-and-initializing-a04b0d1.md`).
+- The Cloud MTA Build Tool defaults (`mta_archives/`, module folder as build result, `build-parameters.ignore`) from the `SAP/cloud-mta-build-tool` mirror (`docs/docs/usage.md`, `configuration.md`); `gitignore(5)` from the `git/git` mirror (`Documentation/gitignore.adoc`).
+- **OWASP Top 10 (2025):** the category names and the URL pattern `https://owasp.org/Top10/2025/<id>_2025-<Title_with_underscores>/` were verified from `2025/mkdocs.yml` in the `OWASP/Top10` GitHub repository (`site_url` and the `nav` entries, for example `A07 Authentication Failures: en/A07_2025-Authentication_Failures.md`); `packages/cli/src/model/owasp.ts` holds the map and builds every link from that one pattern. The 2025 edition merged "Vulnerable and Outdated Components" into A03 Software Supply Chain Failures.

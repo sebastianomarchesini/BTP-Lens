@@ -2,13 +2,23 @@
 
 ## Unreleased
 
-### Changed
-
-- The Cloud Foundry client is typed against `ReadOnlyHttp`, a view of the HTTP layer with a single `get` method whose request has no method and no body field, so its code cannot ask for anything but `GET`. A type-level test fails CI if the client is ever given more. The allow-list still refuses every other method for the CF API host, as before.
-
 ### Added
 
+- **`btp-lens project --path <dir>`:** a second scan target, a local CAP or MTA project directory, read from the file system only (no network, no child process, no `git`). It writes the same snapshot and reports as `scan`, `report --from` works on its snapshots, and `--fail-on` applies. The collector opens an allow-list of files (`package.json`, `.cdsrc.json`, `.cdsrc.yaml`, `mta.yaml`, `xs-security.json`, `xs-app.json`, `*.cds`, seed `*.csv`, `*.html`; `*.mtar` is only stat'ed) and never opens `.cdsrc-private.json`, `.cdsrc.js`, `default-env.json`, `.env*`, `*.mtaext`, keys, `*.http` or `*.md`; it keeps identifiers, counts and booleans, never file contents, CSV values, mocked user names, passwords or absolute paths ([docs/data-sources.md §8](docs/data-sources.md#8-local-project-files-btp-lens-project), [docs/privacy.md](docs/privacy.md#project-scans)).
+- **Thirteen project rules**, derived from the OWASP Top 10 (2025) patterns of the public SAP TechEd 2026 workshop XP261: `CAP_MOCKED_AUTH_IN_PROD`, `CAP_MOCKED_USER_PASSWORD`, `CAP_AUDITLOG_MISSING`, `CAP_AUDITLOG_NOT_BOUND`, `CAP_PERSONAL_DATA_UNANNOTATED`, `CAP_SERVICE_NO_RESTRICTION`, `CAP_ROLE_NOT_IN_XSUAA`, `XSUAA_SCOPE_UNUSED`, `APPROUTER_ROUTE_NO_AUTH`, `APPROUTER_CSRF_DISABLED`, `DEPLOY_ARTIFACT_IN_REPO`, `SEED_DATA_SENSITIVE`, `UI5_BOOTSTRAP_EXTERNAL`. Each is documented in [docs/rules.md](docs/rules.md#project-rules) with its data, trigger, severity, evidence, remediation, verified references and limits.
+- **OWASP Top 10 (2025) tags** on every rule (`owasp` in the rule metadata, `owasp/<id>` tags in SARIF, shown per rule in the HTML report), and a **criticality matrix** (impact × ease of attack → severity, `packages/cli/src/model/criticality.ts`) that the new rules use; findings record the two inputs as `impact` and `easeOfAttack` in their evidence.
+- **Findings with a file location:** project findings carry `location: { file, line? }`; SARIF emits it as a `physicalLocation` with `uriBaseId: PROJECTROOT` (and a region when the line is known), the HTML report shows `file:line` under the finding, and the findings CSV gains `file` and `line` columns.
+- **HTML report for project scans:** "Projects scanned", "Services open to all users" and "Personal data without annotations" key figures, a Projects tab instead of Apps, the OWASP category in each rule panel, and a "Start here" summary for the project.
+- `npm run sample` also renders the project sample report (`reports/sample-project/`), and a Playwright check opens it from disk with networking disabled.
 - `docs/due-diligence.md`: answers to the questions that managers and security, legal and procurement teams ask before a first run, each pointing to the code, test or document behind it.
+
+### Changed
+
+- **Snapshot (schema version unchanged, older snapshots still load):** `scope.projects`, `raw.projects`, `kind` (`app` or `project`) on inventory items, `state`, `createdAt` and `updatedAt` nullable for projects, `owasp` on rule metadata, `location` on findings, and `summary.projects` next to `summary.apps` in the report data. A test loads the 0.1.0 sample snapshot and checks that it re-analyses to the same findings.
+- **CSV:** the findings file ends with three new trailing columns `owasp`, `file`, `line`, and the apps file with `kind`; existing columns keep their order.
+- **SARIF:** rule tags gain `owasp/<id>`; fingerprints of Cloud Foundry findings are unchanged, and project findings add the file and subject to theirs so that two findings of one rule on one project stay distinct.
+- The Cloud Foundry client is typed against `ReadOnlyHttp`, a view of the HTTP layer with a single `get` method whose request has no method and no body field, so its code cannot ask for anything but `GET`. A type-level test fails CI if the client is ever given more. The allow-list still refuses every other method for the CF API host, as before.
+- The CLI depends on `yaml` (ISC) in addition to `commander` and `zod`, to read `mta.yaml` and `.cdsrc.yaml`.
 
 ## 0.1.0 (2026-10-10)
 

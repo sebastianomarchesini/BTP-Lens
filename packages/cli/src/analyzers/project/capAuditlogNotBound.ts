@@ -102,7 +102,7 @@ export const capAuditlogNotBound: Analyzer = {
     id: RULE_ID,
     title: 'Audit logging is installed but no audit log service is bound',
     description:
-      'The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so audit entries go to the console or are dropped in production.',
+      'The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so the plugin cannot connect to an audit log service in production and personal-data accesses fail or go unlogged.',
     roles: [],
     owasp: ['A09:2025'],
     helpUri: ruleHelpUri(RULE_ID),

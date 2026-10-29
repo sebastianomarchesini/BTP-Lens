@@ -97,7 +97,7 @@ export const capMockedAuthInProd: Analyzer = {
     id: RULE_ID,
     title: 'Mocked authentication is configured for production',
     description:
-      'The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). Anyone who knows a mocked user name can act as that user, and dummy authentication accepts every request.',
+      'The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). With mocked, the pre-defined mock users shipped with @sap/cds (one of them an admin) and any other login are accepted unless the project overrides them; basic accepts the users listed in the project files; dummy accepts every request and disables @requires and @restrict.',
     roles: [],
     owasp: ['A07:2025'],
     helpUri: ruleHelpUri(RULE_ID),

@@ -259,12 +259,62 @@ describe('btp-lens project on the acme-incidents fixture', () => {
     expect(report.summary.apps).toBe(0);
   });
 
-  it('(9) reports findings with a subject each', () => {
-    // TODO(integrator): once all 13 project rules have landed, replace this
-    // with the exact sorted list of (id, severity, evidence.subject) for the
-    // acme-incidents fixture (spec §9, assertion 9), e.g.
-    //   expect(snapshot.findings.map((f) => [f.id, f.severity, f.evidence.subject])).toEqual([...]);
-    expect(snapshot.findings.length).toBeGreaterThan(0);
+  it('(9) reports exactly the findings the fixture was designed to trigger', () => {
+    // Every project rule fires at least once; Warehouses, Incidents, ProcessorService,
+    // InternalService, ExternalService, the ui5/MTX/logout routes, $XSAPPNAME.callback
+    // and the header-less test/data export stay silent (docs/rules.md).
+    expect(snapshot.findings.map((f) => [f.id, f.severity, f.evidence.subject])).toEqual([
+      ['CAP_MOCKED_AUTH_IN_PROD', 'critical', 'requires.auth'],
+      ['CAP_SERVICE_NO_RESTRICTION', 'critical', 'AdminService'],
+      ['SEED_DATA_SENSITIVE', 'high', 'db/data/acme.incidents-Customers.csv#creditCardNo'],
+      ['APPROUTER_CSRF_DISABLED', 'medium', '^/odata/(.*)$'],
+      ['APPROUTER_ROUTE_NO_AUTH', 'medium', '^/public/(.*)$'],
+      ['CAP_AUDITLOG_MISSING', 'medium', 'requires.audit-log'],
+      ['CAP_AUDITLOG_NOT_BOUND', 'medium', 'auditlog'],
+      ['CAP_PERSONAL_DATA_UNANNOTATED', 'medium', 'Customers'],
+      ['CAP_PERSONAL_DATA_UNANNOTATED', 'medium', 'Addresses'],
+      ['CAP_ROLE_NOT_IN_XSUAA', 'medium', 'auditor'],
+      ['DEPLOY_ARTIFACT_IN_REPO', 'medium', 'mta_archives/acme-incidents_1.0.0.mtar'],
+      ['UI5_BOOTSTRAP_EXTERNAL', 'medium', 'app/incidents/webapp/index.html'],
+      ['CAP_MOCKED_USER_PASSWORD', 'low', 'requires.auth.users'],
+      ['UI5_BOOTSTRAP_EXTERNAL', 'low', 'app/incidents/webapp/test/flpSandbox.html'],
+      ['UI5_BOOTSTRAP_EXTERNAL', 'low', 'app/launchpage.html'],
+      ['XSUAA_SCOPE_UNUSED', 'low', '$XSAPPNAME.unused'],
+    ]);
+    // The facts a reader checks first: title branch, view and location of the one-per-project rules.
+    const byId = new Map(
+      snapshot.findings.map((f) => [`${f.id}:${String(f.evidence.subject)}`, f]),
+    );
+    expect(byId.get('CAP_SERVICE_NO_RESTRICTION:AdminService')).toMatchObject({
+      title: 'Service is open to everyone',
+      evidence: { authKind: 'mocked', restrictAllServices: true, writableEntities: 2, actions: 1 },
+      location: { file: 'srv/services.cds', line: 4 },
+    });
+    expect(byId.get('CAP_AUDITLOG_MISSING:requires.audit-log')).toMatchObject({
+      title:
+        'Audit logging plugin is listed under devDependencies only, so it is inactive in production',
+      evidence: { personalDataDeclared: false, inferredEntities: 2, pluginInDevDependencies: true },
+    });
+    expect(byId.get('CAP_AUDITLOG_NOT_BOUND:auditlog')).toMatchObject({
+      evidence: { auditLogKind: null, auditLogConfigured: false },
+      location: { file: 'mta.yaml' },
+    });
+    expect(byId.get('CAP_MOCKED_USER_PASSWORD:requires.auth.users')).toMatchObject({
+      evidence: { view: 'development', usersWithPassword: 1 },
+    });
+    expect(byId.get('CAP_PERSONAL_DATA_UNANNOTATED:Addresses')?.evidence).toMatchObject({
+      reason: 'linked-entity',
+      linkedTo: 'Customers',
+    });
+    expect(byId.get('APPROUTER_ROUTE_NO_AUTH:^/public/(.*)$')?.evidence).toMatchObject({
+      targetHint: 'other',
+      apiLike: false,
+      exemptedRoutes: 2,
+    });
+    expect(byId.get('UI5_BOOTSTRAP_EXTERNAL:app/launchpage.html')?.evidence).toMatchObject({
+      host: 'cdn.example.com',
+      versionForm: 'evergreen',
+    });
     for (const finding of snapshot.findings) {
       expect(typeof finding.evidence.subject, finding.id).toBe('string');
     }
@@ -310,6 +360,12 @@ describe('btp-lens project on the acme-incidents fixture', () => {
       'poison-git',
       'poison-file',
       'poison-alias',
+    ]);
+    // The plugin under devDependencies only: CAP_AUDITLOG_MISSING (inactive in production)
+    // and CAP_AUDITLOG_NOT_BOUND (adopted, but no auditlog resource) both apply.
+    expect(project.packageJson.devDependencies.map((d) => d.name)).toEqual([
+      '@cap-js/sqlite',
+      '@cap-js/audit-logging',
     ]);
     expect(project.mta?.modules.map((m) => m.buildpack)).toEqual([
       'nodejs_buildpack',

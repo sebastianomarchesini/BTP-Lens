@@ -242,6 +242,58 @@ describe('APPROUTER_CSRF_DISABLED', () => {
     ]);
   });
 
+  it('fires on the xs-app.json that cds add app-frontend writes (cds-dk 10.2.0 template)', () => {
+    // Without xsuaa the template omits authenticationType, so the route is still authenticated
+    // through the bindings; the catch-all route goes to the app-front service and is exempt.
+    const findings = runRule(
+      approuterCsrfDisabled,
+      project([
+        xsApp('app/incidents/public/xs-app.json', [
+          {
+            source: '^/?odata/(.*)$',
+            authenticationType: null,
+            csrfProtection: false,
+            targetHint: 'api',
+          },
+          { source: '.*', target: 'service', targetHint: 'other' },
+        ]),
+      ]),
+    );
+    expect(subjects(findings)).toEqual([['^/?odata/(.*)$', 'medium']]);
+    expect(findings[0]!.evidence).toMatchObject({ authenticationType: null, routes: 2 });
+    expect(findings[0]!.location).toEqual({ file: 'app/incidents/public/xs-app.json' });
+    expect(FindingSchema.safeParse(findings[0]).success).toBe(true);
+  });
+
+  it('does not fire on what cds add approuter, html5-repo and workzone-standard write', () => {
+    // All three cds-dk 10.2.0 templates set csrfProtection true on the srv-api route.
+    const srvApi: Partial<RawXsAppRoute> = {
+      source: '^/?odata/(.*)$',
+      csrfProtection: true,
+      targetHint: 'api',
+    };
+    const html5Repo: Partial<RawXsAppRoute> = {
+      source: '^(.*)$',
+      target: 'service',
+      targetHint: 'html5-repo',
+    };
+    const findings = runRule(
+      approuterCsrfDisabled,
+      project([
+        xsApp('app/router/xs-app.json', [
+          { source: '^/-/cds/.*', authenticationType: 'none', targetHint: 'api' },
+          srvApi,
+          html5Repo,
+        ]),
+        xsApp('app/catalog/xs-app.json', [srvApi, html5Repo]),
+        xsApp('app/approuter/xs-app.json', [
+          { source: '^/(.*)$', authenticationType: null, csrfProtection: true, targetHint: 'api' },
+        ]),
+      ]),
+    );
+    expect(findings).toEqual([]);
+  });
+
   it('links the SAP Help route topics, the OWASP CSRF cheat sheet and OWASP A01:2025', () => {
     const finding = runRule(approuterCsrfDisabled, project([xsApp(FILE, [odataRoute()])]))[0]!;
     expect(finding.references).toEqual([

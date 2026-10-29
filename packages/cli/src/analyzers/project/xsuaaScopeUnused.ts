@@ -12,7 +12,7 @@ export const XSAPPNAME_PREFIX = '$XSAPPNAME.';
 const SEVERITY: MatrixSeverity = { impact: 'minor', easeOfAttack: 'complex' };
 
 const REMEDIATION =
-  'Reference the scope from a role template in xs-security.json, for example ' +
+  'Reference the scope from a role template in the security descriptor, for example ' +
   '`"role-templates": [{ "name": "Admin", "scope-references": ["$XSAPPNAME.admin"] }]`, so it can be ' +
   'assigned through a role collection, or remove the scope. If another application is meant to call ' +
   'with it, grant it explicitly with `granted-apps` or `grant-as-authority-to-apps`. In a CAP project, ' +
@@ -20,6 +20,7 @@ const REMEDIATION =
   'step with the roles used in the CDS model.';
 
 const REFERENCES = [
+  'https://help.sap.com/docs/btp/sap-business-technology-platform/application-security-descriptor-configuration-syntax',
   'https://help.sap.com/docs/btp/sap-business-technology-platform/building-roles-and-role-collections-for-applications',
   'https://cap.cloud.sap/docs/guides/security/cap-users',
   owaspUrl('A02:2025'),
@@ -49,21 +50,36 @@ interface UnusedScope {
   descriptor: RawXsSecurity;
 }
 
+/*
+ * File order, then source. Two xsuaa resources of one mta.yaml share both, so
+ * the descriptor with more role templates, then more scopes, comes first:
+ * the evidence must not depend on the order the collector listed them in.
+ */
 function compareDescriptors(a: RawXsSecurity, b: RawXsSecurity): number {
-  return a.file.localeCompare(b.file) || a.source.localeCompare(b.source);
+  return (
+    a.file.localeCompare(b.file) ||
+    a.source.localeCompare(b.source) ||
+    b.roleTemplates.length - a.roleTemplates.length ||
+    b.scopes.length - a.scopes.length
+  );
 }
 
-/** Unreferenced scopes, one per name (the first descriptor in file order), sorted by name. */
+/**
+ * Unreferenced scopes, one per local name (`$XSAPPNAME.x` and `x` are the
+ * same scope, as they are for references), reported from the first
+ * descriptor in file order and sorted by the name as written there.
+ */
 function unusedScopes(project: RawProject): UnusedScope[] {
   const referenced = referencedScopes(project.xsSecurity);
-  const byName = new Map<string, UnusedScope>();
+  const byLocalName = new Map<string, UnusedScope>();
   for (const descriptor of [...project.xsSecurity].sort(compareDescriptors)) {
     for (const scope of descriptor.scopes) {
-      if (scope.grantedToApps || referenced.has(localName(scope.name))) continue;
-      if (!byName.has(scope.name)) byName.set(scope.name, { name: scope.name, descriptor });
+      const name = localName(scope.name);
+      if (scope.grantedToApps || referenced.has(name)) continue;
+      if (!byLocalName.has(name)) byLocalName.set(name, { name: scope.name, descriptor });
     }
   }
-  return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return [...byLocalName.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function findingFor(context: AnalyzerContext, project: RawProject, scope: UnusedScope): Finding {
@@ -86,15 +102,15 @@ function findingFor(context: AnalyzerContext, project: RawProject, scope: Unused
 /**
  * XSUAA_SCOPE_UNUSED: a scope in the security descriptor that no role
  * template references and that is not granted to another application can
- * never be assigned, so it is dead configuration that misstates the
- * authorization model. See docs/rules.md.
+ * never reach a role collection, so it is dead configuration that misstates
+ * the authorization model. See docs/rules.md.
  */
 export const xsuaaScopeUnused: Analyzer = {
   rule: {
     id: RULE_ID,
     title: 'Scope is defined but no role template references it',
     description:
-      'A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so it can never be assigned; such leftovers hide the real authorization model.',
+      'A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so no role collection can ever carry it; such leftovers hide the real authorization model.',
     roles: [],
     owasp: ['A02:2025'],
     helpUri: ruleHelpUri(RULE_ID),

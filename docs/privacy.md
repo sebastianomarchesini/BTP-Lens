@@ -4,7 +4,7 @@ BTP Lens runs on your machine and writes files to your disk. This page lists wha
 
 ## Principles
 
-1. **Read-only.** The HTTP client allows only `GET` to the CF API. This is enforced per host by the egress allow-list in `packages/cli/src/net/allowlist.ts`, and unit tests prove it.
+1. **Read-only.** The HTTP client allows only `GET` to the CF API. This is enforced per host by the egress allow-list in `packages/cli/src/net/allowlist.ts`, and unit tests prove it. A project scan (`btp-lens project`) only reads files and makes no request at all.
 2. **No data leaves the machine.** The allow-list is the only way out, and redirects are never followed. There is no telemetry.
 3. **No personal data** in any output.
 4. **No secret values** in any output.
@@ -54,6 +54,27 @@ The snapshot and reports contain only allow-listed fields. The parsers drop ever
 - **Logs** are not read in v0.1.
 
 A test scans the snapshot and every report format for planted secrets, emails, JWTs and credential URLs (`packages/cli/test/e2e/leak.test.ts`).
+
+## Project scans
+
+`btp-lens project --path <dir>` reads files of a local CAP or MTA project. It makes **no network request at all**, starts no child process and never runs `git`; the only outbound connection of such a scan is none. The allow-list of files it opens, and the files it never opens, are in [data-sources.md §8](data-sources.md#8-local-project-files-btp-lens-project).
+
+What a project scan keeps:
+
+- The relative file names of the recognised files it opened (`package.json`, `.cdsrc.json`, `.cdsrc.yaml`, `mta.yaml`, `xs-security.json`, `xs-app.json`, `*.cds`, seed `*.csv`, `*.html`), the names and sizes of `*.mtar` archives, and for unreadable files the name and a reason code.
+- Identifiers: the project id (the MTA id, else the package name without its scope, else the folder name), package names and version ranges of dependencies (a non-registry range such as a git or file URL is replaced by `[non-registry]`), module, resource, service, plan and buildpack names from `mta.yaml` (credentials in buildpack URLs are removed and the query string dropped), scope, role-template and attribute names from the security descriptor, route source patterns from `xs-app.json`, and service, entity, element, action and role names from the CDS model.
+- Counts and booleans: how many mocked users exist and how many carry a password, whether `restrict_all_services` or `audit-log` is configured, which authentication kind is set (as an enum, unknown strings become `other`), whether a route sets `csrfProtection`, whether an archive is git-ignored, whether a `.git` entry exists, and for seed CSV files the number of rows checked and the number of values that match a card, IBAN or secret check per sensitive column.
+- From HTML pages: the line of the SAPUI5 bootstrap and its `src` reduced to origin and path (user info, query and fragment are dropped), whether it is external, whether an `integrity` attribute exists (never its value) and the version form.
+
+What a project scan never keeps:
+
+- File contents, comments or doc strings, CSV cell values and CSV headers (only the names of the columns that matched a sensitive pattern are kept), element types, defaults, titles and every annotation other than the recognised `@requires`, `@restrict.to`, `@readonly`, `@protocol`, `@cds.external` and `@PersonalData` markers.
+- Mocked user names, passwords, roles and attributes (`cds.requires.auth.users` is only counted), destination names (only a hint such as `api` or `ui5-cdn` is derived from them), `description` fields, `oauth2-configuration`, `authorities`, `xsappname`, service keys, `properties`, `hooks`, `build-parameters` and `provides` of `mta.yaml`, and `VCAP_SERVICES`-shaped data.
+- Absolute paths: every stored path is relative to the project root, the real path of the root is never written, the log prints counts and the project id only, and a collector error becomes a reason code rather than a message that could carry a path or file content.
+- URLs with credentials: user info is removed from buildpack URLs and bootstrap sources.
+- Files that typically hold credentials are never opened: `.cdsrc-private.json`, `.cdsrc.js`, `default-env.json`, `.env*`, `*.mtaext`, `*-key.json`, `*.pem`, `*.key`, `*.http`, `manifest.json`, `*.md`, and everything under `node_modules`, `.git`, `gen`, `dist`, `target`, `build`, `coverage` or any dot-directory.
+
+The acme-incidents fixture plants a poison value in every one of those places, and `packages/cli/test/e2e/project.test.ts` fails if any of them, an absolute path or the temporary folder name reaches the snapshot, a report or the terminal.
 
 ## Side effects in your landscape
 

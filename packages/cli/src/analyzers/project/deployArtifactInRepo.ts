@@ -6,7 +6,7 @@ import { type MatrixSeverity, projectFinding } from './support.js';
 
 export const RULE_ID = 'DEPLOY_ARTIFACT_IN_REPO';
 
-/** With a `.git` directory the archive is one `git add .` away from the history. */
+/** With a `.git` entry (directory or worktree file) the archive is one `git add .` away from the history. */
 const IN_REPOSITORY: MatrixSeverity = { impact: 'moderate', easeOfAttack: 'advanced' };
 /*
  * Without one the archive only lingers on disk until the folder is put under

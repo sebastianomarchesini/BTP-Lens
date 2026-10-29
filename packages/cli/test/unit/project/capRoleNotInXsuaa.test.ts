@@ -153,6 +153,23 @@ describe('CAP_ROLE_NOT_IN_XSUAA', () => {
       none([restricted(['auditor'])], []);
     });
 
+    it('when no descriptor declares a scope or a role template', () => {
+      // `cds add xsuaa` writes `config: { xsappname, tenant-mode }` into mta.yaml next to
+      // `path: ./xs-security.json`; when that file is generated or ignored, the inline block
+      // is the only descriptor the collector sees and says nothing about roles.
+      none(
+        [restricted(['auditor'])],
+        [xsSecurity({ file: 'mta.yaml', source: 'mta.yaml', scopes: [] })],
+      );
+      none(
+        [restricted(['auditor'])],
+        [
+          xsSecurity({ file: 'mta.yaml', source: 'mta.yaml', scopes: [] }),
+          xsSecurity({ scopes: [], attributes: ['Country'] }),
+        ],
+      );
+    });
+
     it('when the scope is defined as $XSAPPNAME.<role>', () => {
       none([restricted(['auditor'])], [descriptor(['auditor'])]);
     });
@@ -186,6 +203,11 @@ describe('CAP_ROLE_NOT_IN_XSUAA', () => {
       none([restricted(['$XSAPPNAME.auditor'])], [descriptor(['admin'])]);
       none([restricted([], ['$REQUEST.auditor'])], [descriptor(['admin'])]);
       none([restricted(['xs:auditor'])], [descriptor(['admin'])]);
+    });
+
+    it('when a dotted role name has its dotted scope', () => {
+      none([restricted(['acme.auditor'])], [descriptor(['acme.auditor'])]);
+      none([restricted(['acme.auditor'])], [xsSecurity({ scopes: ['acme.auditor'] })]);
     });
 
     it('when @sap/ams is a dependency', () => {
@@ -226,6 +248,41 @@ describe('CAP_ROLE_NOT_IN_XSUAA', () => {
     expect(subjects(findings)).toEqual(['auditor']);
   });
 
+  it('fires against a descriptor that has role templates but no scopes', () => {
+    const findings = runRule(
+      capRoleNotInXsuaa,
+      project(
+        [restricted(['auditor'])],
+        [xsSecurity({ scopes: [], roleTemplates: [['auditor', ['$XSAPPNAME.auditor']]] })],
+      ),
+    );
+    expect(subjects(findings)).toEqual(['auditor']);
+    expect(findings[0]!.evidence).toMatchObject({
+      descriptors: ['xs-security.json'],
+      scopesChecked: 0,
+    });
+  });
+
+  it('locates the role in the first file of the collector order, at its lowest line there', () => {
+    // The collector sorts paths by code point (`B` before `a`), which is not locale order.
+    const files = [
+      cdsFile('srv/B.cds', {
+        services: [
+          service('Beta', {
+            line: 9,
+            entities: [serviceEntity('Items', { line: 11, restrictTo: ['auditor'] })],
+            actions: [action('close', { line: 10, requires: ['auditor'] })],
+          }),
+        ],
+        annotates: [annotate('Beta.Items', { line: 4, restrictTo: ['auditor'] })],
+      }),
+      cdsFile('srv/a.cds', { services: [service('Alpha', { line: 1, requires: ['auditor'] })] }),
+    ];
+    const findings = runRule(capRoleNotInXsuaa, project(files, [descriptor(['admin'])]));
+    expect(findings).toHaveLength(1);
+    expect(findings[0]!.location).toEqual({ file: 'srv/B.cds', line: 4 });
+  });
+
   it('matches scope names exactly: case and prefix matter', () => {
     const findings = runRule(
       capRoleNotInXsuaa,
@@ -238,7 +295,12 @@ describe('CAP_ROLE_NOT_IN_XSUAA', () => {
   });
 
   it('emits one finding per role, however often and wherever it is referenced', () => {
+    // Files in collector order (sorted paths), as a scan delivers them.
     const files = [
+      cdsFile('srv/a.cds', {
+        services: [service('AlphaService', { line: 5, restrictTo: ['alpha'] })],
+        annotates: [annotate('ZetaService', { line: 1, requires: ['zeta'] })],
+      }),
       cdsFile('srv/z.cds', {
         services: [
           service('ZetaService', {
@@ -248,13 +310,9 @@ describe('CAP_ROLE_NOT_IN_XSUAA', () => {
           }),
         ],
       }),
-      cdsFile('srv/a.cds', {
-        services: [service('AlphaService', { line: 5, restrictTo: ['alpha'] })],
-        annotates: [annotate('ZetaService', { line: 1, requires: ['zeta'] })],
-      }),
     ];
     const findings = runRule(capRoleNotInXsuaa, project(files, [descriptor(['admin'])]));
-    // Each role is located at its first reference (file order, then line); the framework
+    // Each role is located at its first reference (collector order, then line); the framework
     // then orders findings by location, so `zeta` (line 1) comes before `alpha` (line 5).
     expect(subjects(findings)).toEqual(['zeta', 'alpha']);
     expect(findings.map((f) => f.location)).toEqual([

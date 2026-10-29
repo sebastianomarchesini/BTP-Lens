@@ -44,6 +44,14 @@ npx btp-lens scan --api https://api.cf.eu10.hana.ondemand.com --org my-org
 open reports/btp-lens-report.html                      # works offline
 ```
 
+### Project scan (no login needed)
+
+```sh
+npx btp-lens project --path ./my-cap-project      # reads the project files, contacts nothing
+```
+
+This checks a local CAP or MTA project the way a reviewer would: effective `cds` configuration per profile, `mta.yaml`, `xs-security.json`, `xs-app.json`, the CDS model, seed CSV files and the SAPUI5 bootstrap, and writes the same reports with a `file:line` location per finding (also in SARIF, for code scanning). The rules follow the OWASP Top 10 (2025) patterns of the public SAP TechEd 2026 workshop XP261; see [docs/rules.md](docs/rules.md#project-rules).
+
 To run the latest development version from source (Node.js 22.12 or later):
 
 ```sh
@@ -71,11 +79,13 @@ btp-lens guided [--no-open]    the same, explicitly
 btp-lens doctor [--api <url>]  checks Node.js, network, certificates, login and output folder
 btp-lens scan   --api <cf api url> --org <name> [--space <name>] [--deep]
                 [--out ./reports] [--format html,json,csv,sarif] [--fail-on <severity>] [--concurrency 5]
+btp-lens project --path <dir> [--out ./reports] [--format html,json,csv,sarif] [--fail-on <severity>] [--quiet]
 btp-lens report --from <snapshot.json> [--format html,json,csv,sarif] [--out ./reports] [--fail-on <severity>]
 btp-lens version
 ```
 
 - With no arguments on a terminal, guided mode starts; in a script it prints usage and exits 2.
+- `project` scans a local CAP or MTA project folder for the thirteen configuration and model rules in [docs/rules.md](docs/rules.md#project-rules) (mocked authentication in production, unrestricted services, missing audit logging, open approuter routes, seed data with card numbers, and more), each tagged with its OWASP Top 10 (2025) category. It reads files only: no login, no network, no child process, and it never opens `.env`, `.cdsrc-private.json`, `default-env.json`, keys or `*.mtaext` files.
 - Guided mode signs in the way `cf login --sso` does (one-time code from your company login) or with username and password, keeps the session in memory only, and writes to `./btp-lens-reports/<date-time>/`.
 - `scan` writes one snapshot (`snapshot-<time>.json`) and the requested reports.
 - `report --from` re-runs every rule on a snapshot **offline**, for example after you upgrade BTP Lens.
@@ -93,6 +103,7 @@ The HTML report is a single file. Fonts, themes and data are embedded, it follow
 | App inventory and current droplets (`collect.apps`, `collect.droplets`), rule `APP_NO_RECENT_DEPLOY` | Space Auditor | on |
 | Planned: processes, buildpacks, stacks, routes, binding metadata and the rules built on them | Space Auditor | on, in the next releases |
 | Planned: plain-text secrets in environment variable **names** (`ENV_SECRET_PLAINTEXT`) | Space Developer or Space Supporter | `--deep` only |
+| Project scan (`collect.project` and the thirteen project rules) | none: local files, no login, no network | on, for `btp-lens project` |
 
 The Cloud Foundry list endpoints answer with what your user may see rather than with 403, so a user who can see the org but none of its spaces gets a clear message and exit code 2 instead of an empty report. When a call does return 403, the check is recorded as *skipped: insufficient role* and the scan continues. Details are in [docs/permissions.md](docs/permissions.md).
 

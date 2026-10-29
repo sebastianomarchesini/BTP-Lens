@@ -1,8 +1,8 @@
 import type { Finding } from '../../model/finding.js';
 import { owaspUrl } from '../../model/owasp.js';
-import type { CdsAuthKind, CdsView, RawProject } from '../../model/raw.js';
+import type { CdsAuthKind, CdsView, RawCdsFile, RawProject } from '../../model/raw.js';
 import { type Analyzer, type AnalyzerContext, ruleHelpUri } from '../types.js';
-import { type EffectiveService, effectiveServices } from './cdsModel.js';
+import { type EffectiveService, effectiveServices, namesMatch, resolveTarget } from './cdsModel.js';
 import { type MatrixSeverity, projectFinding } from './support.js';
 
 export const RULE_ID = 'CAP_SERVICE_NO_RESTRICTION';
@@ -44,13 +44,44 @@ function isOpenToEveryone(production: CdsView): boolean {
   );
 }
 
-function isUnrestricted(service: EffectiveService): boolean {
+function restricts(annotate: { requires: string[]; restrictTo: string[] }): boolean {
+  return annotate.requires.length > 0 || annotate.restrictTo.length > 0;
+}
+
+/** The database entities the service's entities project on, with `using` aliases resolved. */
+function projectionSources(file: RawCdsFile, service: EffectiveService): string[] {
+  return service.entities.flatMap((entity) =>
+    entity.projectionOf === null ? [] : [resolveTarget(file, entity.projectionOf)],
+  );
+}
+
+/**
+ * A service entity inherits the restriction of the database entity it
+ * projects on (CAP "Propagation of Restrictions"), so an `annotate` that
+ * restricts the source restricts the service as well. Restrictions written
+ * inline on the database entity are not collected; see docs/rules.md.
+ */
+function inheritsRestriction(project: RawProject, service: EffectiveService): boolean {
+  const file = project.cdsFiles.find((candidate) => candidate.file === service.file);
+  if (!file) return false;
+  const sources = projectionSources(file, service);
+  if (sources.length === 0) return false;
+  return project.cdsFiles.some((other) =>
+    other.annotates.some(
+      (annotate) =>
+        restricts(annotate) &&
+        sources.some((source) => namesMatch(resolveTarget(other, annotate.target), source)),
+    ),
+  );
+}
+
+function isUnrestricted(project: RawProject, service: EffectiveService): boolean {
   return (
-    service.requires.length === 0 &&
-    service.restrictTo.length === 0 &&
+    !restricts(service) &&
     !service.protocolNone &&
     !service.external &&
-    !EXTERNAL_DIR.test(service.file)
+    !EXTERNAL_DIR.test(service.file) &&
+    !inheritsRestriction(project, service)
   );
 }
 
@@ -73,7 +104,8 @@ function compareServices(a: EffectiveService, b: EffectiveService): number {
 /** Unrestricted services, one per name (the first declaration in file order), sorted by name. */
 function unrestrictedServices(project: RawProject): EffectiveService[] {
   const byName = new Map<string, EffectiveService>();
-  for (const service of effectiveServices(project).filter(isUnrestricted).sort(compareServices)) {
+  const open = effectiveServices(project).filter((service) => isUnrestricted(project, service));
+  for (const service of open.sort(compareServices)) {
     if (!byName.has(service.name)) byName.set(service.name, service);
   }
   return [...byName.values()];
@@ -106,7 +138,8 @@ function findingFor(
 
 /**
  * CAP_SERVICE_NO_RESTRICTION: a served CDS service carries no `@requires` or
- * `@restrict` anywhere (service, entities, actions, annotates). In production
+ * `@restrict` anywhere (service, entities, actions, annotates, projected
+ * database entities). In production
  * cds lets every authenticated user in; with `restrict_all_services: false` or
  * a development authentication strategy it lets everyone in. See docs/rules.md.
  */
@@ -115,7 +148,7 @@ export const capServiceNoRestriction: Analyzer = {
     id: RULE_ID,
     title: TITLE_AUTHENTICATED,
     description:
-      'A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and change its data.',
+      'A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and, unless its entities are read-only, change its data.',
     roles: [],
     owasp: ['A01:2025'],
     helpUri: ruleHelpUri(RULE_ID),

@@ -351,6 +351,58 @@ describe('CAP_PERSONAL_DATA_UNANNOTATED', () => {
     ]);
   });
 
+  it('emits the same findings whatever the order of files and entities', () => {
+    const files = [
+      cdsFile('db/z.cds', {
+        entities: [
+          entity('Vendors', ['taxId'], { line: 2 }),
+          entity('Buyers', ['phone'], { line: 1 }),
+        ],
+      }),
+      cdsFile('db/a.cds', {
+        entities: [
+          entity('Members', ['city'], { line: 9 }),
+          entity('Addresses', ['street'], { line: 4, ...toCustomers }),
+          entity('Customers', ['email'], { line: 1 }),
+        ],
+      }),
+    ];
+    const reversed = files.map((file) => ({ ...file, entities: [...file.entities].reverse() }));
+    const expected = runRule(capPersonalDataUnannotated, project(...files));
+    expect(runRule(capPersonalDataUnannotated, project(...reversed.reverse()))).toEqual(expected);
+    expect(expected.map((f) => [f.location?.file, f.location?.line, f.evidence.subject])).toEqual([
+      ['db/a.cds', 1, 'Customers'],
+      ['db/a.cds', 4, 'Addresses'],
+      ['db/a.cds', 9, 'Members'],
+      ['db/z.cds', 1, 'Buyers'],
+      ['db/z.cds', 2, 'Vendors'],
+    ]);
+  });
+
+  it('produces a schema-valid finding for every reason', () => {
+    const findings = runRule(
+      capPersonalDataUnannotated,
+      project(
+        schema(
+          entity('Customers', ['ID', 'email']),
+          entity('Addresses', ['ID', 'city'], toCustomers),
+          entity('Contacts', ['ID', 'street']),
+        ),
+      ),
+    );
+    expect(findings.map((f) => f.evidence.reason).sort()).toEqual([
+      'entity-name',
+      'linked-entity',
+      'strong-fields',
+    ]);
+    for (const finding of findings) {
+      expect(FindingSchema.safeParse(finding).success).toBe(true);
+      expect(finding.severity).toBe('medium');
+      expect(typeof finding.evidence.subject).toBe('string');
+      expect(finding.location?.file).toBe('db/schema.cds');
+    }
+  });
+
   it('emits one finding per subject when two files declare the same entity name', () => {
     const findings = runRule(
       capPersonalDataUnannotated,

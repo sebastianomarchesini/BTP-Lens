@@ -335,7 +335,7 @@
     {
       "id": "CAP_MOCKED_AUTH_IN_PROD",
       "title": "Mocked authentication is configured for production",
-      "description": "The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). Anyone who knows a mocked user name can act as that user, and dummy authentication accepts every request.",
+      "description": "The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). With mocked, the pre-defined mock users shipped with @sap/cds (one of them an admin) and any other login are accepted unless the project overrides them; basic accepts the users listed in the project files; dummy accepts every request and disables @requires and @restrict.",
       "roles": [],
       "owasp": [
         "A07:2025"
@@ -345,7 +345,7 @@
     {
       "id": "CAP_MOCKED_USER_PASSWORD",
       "title": "Mocked users carry passwords in the project configuration",
-      "description": "Mocked CAP users are defined with a password in a committed configuration file. Passwords in source files travel with every clone and are easy to reuse against other systems.",
+      "description": "Mocked CAP users are defined with a password in a project configuration file (package.json or .cdsrc). Passwords in source files travel with every clone and are easy to reuse against other systems.",
       "roles": [],
       "owasp": [
         "A07:2025"
@@ -365,7 +365,7 @@
     {
       "id": "CAP_AUDITLOG_NOT_BOUND",
       "title": "Audit logging is installed but no audit log service is bound",
-      "description": "The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so audit entries go to the console or are dropped in production.",
+      "description": "The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so the plugin cannot connect to an audit log service in production and personal-data accesses fail or go unlogged.",
       "roles": [],
       "owasp": [
         "A09:2025"
@@ -386,7 +386,7 @@
     {
       "id": "CAP_SERVICE_NO_RESTRICTION",
       "title": "Service is open to every authenticated user",
-      "description": "A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and change its data.",
+      "description": "A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and, unless its entities are read-only, change its data.",
       "roles": [],
       "owasp": [
         "A01:2025"
@@ -407,7 +407,7 @@
     {
       "id": "XSUAA_SCOPE_UNUSED",
       "title": "Scope is defined but no role template references it",
-      "description": "A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so it can never be assigned; such leftovers hide the real authorization model.",
+      "description": "A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so no role collection can ever carry it; such leftovers hide the real authorization model.",
       "roles": [],
       "owasp": [
         "A02:2025"

@@ -121,14 +121,14 @@
       "updatedAt": null,
       "lastDeployAt": null,
       "findingCounts": {
-        "critical": 1,
-        "high": 0,
-        "medium": 1,
-        "low": 1,
+        "critical": 2,
+        "high": 1,
+        "medium": 9,
+        "low": 4,
         "info": 0
       },
       "highestSeverity": "critical",
-      "riskScore": 106
+      "riskScore": 274
     }
   ],
   "findings": [
@@ -170,9 +170,130 @@
       }
     },
     {
+      "id": "CAP_SERVICE_NO_RESTRICTION",
+      "severity": "critical",
+      "title": "Service is open to everyone",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "AdminService",
+        "restrictAllServices": true,
+        "authKind": "mocked",
+        "entities": 2,
+        "writableEntities": 2,
+        "actions": 1,
+        "impact": "severe",
+        "easeOfAttack": "easy"
+      },
+      "remediation": "Restrict the service with `@requires`, for example `service AdminService @(requires: 'admin') { ... }`, using a role that xs-security.json defines as a scope and role template, and add `@restrict` rules on entities or actions that need finer control (`@restrict: [{ grant: 'READ', to: 'viewer' }]`). Mark data that must never be changed through the service with `@readonly`. A service that is only consumed in-process should declare `@protocol: 'none'`. If the service must stay open to every authenticated user, say so explicitly with `@requires: 'authenticated-user'`. When the production profile sets `restrict_all_services: false` or a development authentication strategy, remove that as well, since it lets unauthenticated callers in.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/authorization",
+        "https://cap.cloud.sap/docs/node.js/authentication",
+        "https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/"
+      ],
+      "location": {
+        "file": "srv/services.cds",
+        "line": 4
+      }
+    },
+    {
+      "id": "SEED_DATA_SENSITIVE",
+      "severity": "high",
+      "title": "Seed data contains payment card numbers",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "db/data/acme.incidents-Customers.csv#creditCardNo",
+        "column": "creditCardNo",
+        "kind": "card",
+        "rowsChecked": 2,
+        "rowsMatching": 1,
+        "impact": "significant",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Remove the real values from the CSV file: replace card numbers and IBANs with clearly synthetic, masked values that fail the format checks (for example `****-****-****-1111`), leave secret columns empty, or drop the column from the seed file altogether. Secrets belong in a service binding or a credential store, never in seed data. Keep `db/data` for configuration data and code lists that must reach production; test data belongs in `test/data`, which CAP loads in development only. If the values are real, treat them as exposed: rotate the secrets and remove the file from the repository history as well, since deleting it in a new commit leaves it in every clone.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/databases/initial-data",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+        "https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/"
+      ],
+      "location": {
+        "file": "db/data/acme.incidents-Customers.csv"
+      }
+    },
+    {
+      "id": "APPROUTER_CSRF_DISABLED",
+      "severity": "medium",
+      "title": "CSRF protection is disabled on an authenticated approuter route",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "^/odata/(.*)$",
+        "authenticationType": "xsuaa",
+        "authenticationMethod": "route",
+        "targetHint": "api",
+        "routes": 6,
+        "files": 1,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Remove `\"csrfProtection\": false` from the route in xs-app.json (the default is `true`), so the application router answers 403 to every request other than GET and HEAD (PUT, POST, PATCH, DELETE, ...) that carries no valid `x-csrf-token` header. Clients obtain the token with a GET or HEAD request that sends `x-csrf-token: fetch`; the SAPUI5 OData models and the CAP Fiori preview do this on their own. If the route only ever serves GET and HEAD, CSRF protection costs nothing, so there is no reason to switch it off. If `cds add app-frontend` generated the route, set the flag back to `true` after generating and let the frontend fetch the token.",
+      "references": [
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/routes",
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/application-router-configuration",
+        "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+        "https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/"
+      ],
+      "location": {
+        "file": "app/incidents/xs-app.json"
+      }
+    },
+    {
+      "id": "APPROUTER_ROUTE_NO_AUTH",
+      "severity": "medium",
+      "title": "Approuter route forwards requests without authentication",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "^/public/(.*)$",
+        "target": "destination",
+        "targetHint": "other",
+        "apiLike": false,
+        "exemptedRoutes": 2,
+        "files": 1,
+        "impact": "minor",
+        "easeOfAttack": "easy"
+      },
+      "remediation": "Remove `authenticationType: none` from the route, or set it to `xsuaa` (or `ias` when the approuter is bound to Identity Authentication), so the approuter forwards only requests with a valid session and passes the user token to the backend. Keep `none` only for routes that serve public static content from a `localDir` or the UI5 CDN, and for the logout page. If the destination must stay reachable without a login, make sure the backend enforces its own authentication and does not trust the approuter to have done it.",
+      "references": [
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/routes",
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/routing-configuration-file",
+        "https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/"
+      ],
+      "location": {
+        "file": "app/incidents/xs-app.json"
+      }
+    },
+    {
       "id": "CAP_AUDITLOG_MISSING",
       "severity": "medium",
-      "title": "Fields that look like personal data are modelled but audit logging is not set up",
+      "title": "Audit logging plugin is listed under devDependencies only, so it is inactive in production",
       "app": {
         "guid": "project:acme-incidents",
         "name": "acme-incidents",
@@ -185,10 +306,11 @@
         "declaredEntities": 0,
         "inferredEntities": 2,
         "legacyLibrary": false,
+        "pluginInDevDependencies": true,
         "impact": "moderate",
         "easeOfAttack": "advanced"
       },
-      "remediation": "Annotate the entities that hold personal data with `@PersonalData` (`EntitySemantics` and `DataSubjectRole` on the entity; `FieldSemantics`, `IsPotentiallyPersonal` or `IsPotentiallySensitive` on the elements), then add the `@cap-js/audit-logging` plugin with `cds add audit-logging`: it configures `cds.requires.audit-log` with console output in development and the SAP Audit Log service (`audit-log-to-restv2`) in production, and adds an `auditlog` resource to mta.yaml. Create an SAP Audit Log service instance (service `auditlog`, plan `premium`) in the target space and bind it to the app. The plugin logs only entities annotated with `@PersonalData`, so keep those annotations complete. Verify with `cds env requires.audit-log --profile production`.",
+      "remediation": "Annotate the entities that hold personal data with `@PersonalData` (`EntitySemantics` and `DataSubjectRole` on the entity; `FieldSemantics`, `IsPotentiallyPersonal` or `IsPotentiallySensitive` on the elements), then move `@cap-js/audit-logging` from `devDependencies` to `dependencies`: with `NODE_ENV=production` cds loads plugins from `dependencies` only, so the deployed app runs without audit logging. Make sure an SAP Audit Log service instance (service `auditlog`, plan `premium`) is bound to the app. The plugin logs only entities annotated with `@PersonalData`, so keep those annotations complete. Verify with `cds env requires.audit-log --profile production`.",
       "references": [
         "https://cap.cloud.sap/docs/guides/security/dpp-audit-logging",
         "https://cap.cloud.sap/docs/guides/security/dpp-annotations",
@@ -196,6 +318,201 @@
       ],
       "location": {
         "file": "package.json"
+      }
+    },
+    {
+      "id": "CAP_AUDITLOG_NOT_BOUND",
+      "severity": "medium",
+      "title": "Audit logging is installed but no audit log service is bound",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "auditlog",
+        "auditLogKind": null,
+        "auditLogConfigured": false,
+        "modules": 3,
+        "resources": 3,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Add an SAP Audit Log service instance to the MTA descriptor and require it from the server module: a resource of type `org.cloudfoundry.managed-service` with `service: auditlog` and `service-plan: premium` (what `cds add audit-logging` generates), or `org.cloudfoundry.existing-service` named after an instance created with `cf create-service auditlog premium <name>`; then list the resource under the module `requires`. The plugin finds the `audit-log-to-restv2` binding by its VCAP label `auditlog`; with Audit Log Service NG (`audit-log-to-alsng`) the binding must be named `auditlog-ng`. Without a binding the audit log service cannot initialise in production and audit entries are not written. Verify with `cds env requires.audit-log --profile production` and `cf services`.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/dpp-audit-logging",
+        "https://github.com/cap-js/audit-logging",
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/audit-log-write-api-for-customers",
+        "https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/"
+      ],
+      "location": {
+        "file": "mta.yaml"
+      }
+    },
+    {
+      "id": "CAP_PERSONAL_DATA_UNANNOTATED",
+      "severity": "medium",
+      "title": "Entity holds personal data without @PersonalData annotations",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "Customers",
+        "reason": "strong-fields",
+        "strongFields": [
+          "firstName",
+          "lastName",
+          "email",
+          "phone",
+          "creditCardNo"
+        ],
+        "weakFields": [],
+        "linkedTo": null,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Annotate the entity, preferably in a separate `db/data-privacy.cds` file: `annotate <Entity> with @PersonalData: { EntitySemantics: 'DataSubject', DataSubjectRole: '<Role>' }` for the entity that represents the person, or `EntitySemantics: 'DataSubjectDetails'` for an entity that belongs to one through an association; mark the key, or the association to the data subject, with `@PersonalData.FieldSemantics: 'DataSubjectID'`, each personal element with `@PersonalData.IsPotentiallyPersonal` and sensitive ones (salary, religion, card numbers) with `@PersonalData.IsPotentiallySensitive`. With the `@cap-js/audit-logging` plugin in place (see CAP_AUDITLOG_MISSING), changes of personal and reads of sensitive elements are then logged. The finding is inferred from element and entity names: if the elements are not personal data, rename them so they no longer look like it, or accept the finding.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/dpp-annotations",
+        "https://cap.cloud.sap/docs/guides/security/dpp-audit-logging",
+        "https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/",
+        "https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/"
+      ],
+      "location": {
+        "file": "db/schema.cds",
+        "line": 10
+      }
+    },
+    {
+      "id": "CAP_PERSONAL_DATA_UNANNOTATED",
+      "severity": "medium",
+      "title": "Entity holds address data of a personal entity without @PersonalData annotations",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "Addresses",
+        "reason": "linked-entity",
+        "strongFields": [],
+        "weakFields": [
+          "city",
+          "postCode",
+          "streetAddress"
+        ],
+        "linkedTo": "Customers",
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Annotate the entity, preferably in a separate `db/data-privacy.cds` file: `annotate <Entity> with @PersonalData: { EntitySemantics: 'DataSubject', DataSubjectRole: '<Role>' }` for the entity that represents the person, or `EntitySemantics: 'DataSubjectDetails'` for an entity that belongs to one through an association; mark the key, or the association to the data subject, with `@PersonalData.FieldSemantics: 'DataSubjectID'`, each personal element with `@PersonalData.IsPotentiallyPersonal` and sensitive ones (salary, religion, card numbers) with `@PersonalData.IsPotentiallySensitive`. With the `@cap-js/audit-logging` plugin in place (see CAP_AUDITLOG_MISSING), changes of personal and reads of sensitive elements are then logged. The finding is inferred from element and entity names: if the elements are not personal data, rename them so they no longer look like it, or accept the finding.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/dpp-annotations",
+        "https://cap.cloud.sap/docs/guides/security/dpp-audit-logging",
+        "https://owasp.org/Top10/2025/A04_2025-Cryptographic_Failures/",
+        "https://owasp.org/Top10/2025/A09_2025-Security_Logging_and_Alerting_Failures/"
+      ],
+      "location": {
+        "file": "db/schema.cds",
+        "line": 22
+      }
+    },
+    {
+      "id": "CAP_ROLE_NOT_IN_XSUAA",
+      "severity": "medium",
+      "title": "Role referenced in the CDS model has no scope in the XSUAA descriptor",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "auditor",
+        "role": "auditor",
+        "descriptors": [
+          "mta.yaml",
+          "xs-security.json"
+        ],
+        "scopesChecked": 5,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Add a scope `$XSAPPNAME.<role>` and a role template `<role>` with that scope in its `scope-references` to xs-security.json (or regenerate the file from the model with `cds compile srv --to xsuaa > xs-security.json`), update the xsuaa service instance and assign the role through a role collection. If the name in `@requires` or `@restrict` is a typo, fix the annotation so that it matches an existing scope. When roles are meant to come from Authorization Management Service policies, add `@sap/ams` and configure `cds.requires.auth: ams` for production.",
+      "references": [
+        "https://cap.cloud.sap/docs/guides/security/cap-users#xsuaa-roles",
+        "https://cap.cloud.sap/docs/guides/security/authorization",
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/application-security-descriptor-configuration-syntax",
+        "https://owasp.org/Top10/2025/A01_2025-Broken_Access_Control/",
+        "https://owasp.org/Top10/2025/A07_2025-Authentication_Failures/"
+      ],
+      "location": {
+        "file": "srv/services.cds",
+        "line": 12
+      }
+    },
+    {
+      "id": "DEPLOY_ARTIFACT_IN_REPO",
+      "severity": "medium",
+      "title": "Deployment archive (.mtar) is not ignored by git",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "mta_archives/acme-incidents_1.0.0.mtar",
+        "bytes": 64,
+        "ignored": false,
+        "repository": true,
+        "tracked": "unknown",
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Add `*.mtar` (or the build output folder, usually `mta_archives/`) to the root `.gitignore`. If the archive was already committed, stop tracking it with `git rm --cached <file>` and commit; if it reached a shared remote, treat every credential in its configuration files as exposed and rotate it, since removing the file does not remove it from the history. Build the archive in the pipeline with `mbt build` and deploy from there instead of keeping it next to the sources.",
+      "references": [
+        "https://git-scm.com/docs/gitignore",
+        "https://sap.github.io/cloud-mta-build-tool/usage/",
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/multitarget-applications-in-the-cloud-foundry-environment",
+        "https://owasp.org/Top10/2025/A03_2025-Software_Supply_Chain_Failures/"
+      ],
+      "location": {
+        "file": "mta_archives/acme-incidents_1.0.0.mtar"
+      }
+    },
+    {
+      "id": "UI5_BOOTSTRAP_EXTERNAL",
+      "severity": "medium",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "app/incidents/webapp/index.html",
+        "host": "ui5.example.com",
+        "versionForm": "latest",
+        "testPage": false,
+        "impact": "moderate",
+        "easeOfAttack": "advanced"
+      },
+      "remediation": "Serve SAPUI5 through the approuter instead of a public CDN: route `resources/` to the `ui5` destination or to the HTML5 Application Repository, so the version is controlled by the landscape and does not change behind a deployed app. Where the CDN must stay, pin a specific version (`https://ui5.sap.com/1.120.3/resources/sap-ui-core.js`) rather than the evergreen or unversioned form, and add `integrity=\"sha384-…\"` with `crossorigin=\"anonymous\"` to the bootstrap script, knowing that they protect only the loader: the libraries it fetches at run time are still trusted blindly. Keep the pinned version inside maintenance, since the CDN removes versions one year after their end of maintenance.",
+      "references": [
+        "https://ui5.sap.com/#/topic/2d3eb2f322ea4a82983c1c62a33ec4ae",
+        "https://me.sap.com/notes/3001696",
+        "https://owasp.org/Top10/2025/A08_2025-Software_or_Data_Integrity_Failures/"
+      ],
+      "location": {
+        "file": "app/incidents/webapp/index.html",
+        "line": 7
       }
     },
     {
@@ -226,6 +543,93 @@
       "location": {
         "file": "package.json"
       }
+    },
+    {
+      "id": "UI5_BOOTSTRAP_EXTERNAL",
+      "severity": "low",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "app/incidents/webapp/test/flpSandbox.html",
+        "host": "ui5.example.com",
+        "versionForm": "specific",
+        "testPage": true,
+        "impact": "minor",
+        "easeOfAttack": "complex"
+      },
+      "remediation": "Serve SAPUI5 through the approuter instead of a public CDN: route `resources/` to the `ui5` destination or to the HTML5 Application Repository, so the version is controlled by the landscape and does not change behind a deployed app. Where the CDN must stay, pin a specific version (`https://ui5.sap.com/1.120.3/resources/sap-ui-core.js`) rather than the evergreen or unversioned form, and add `integrity=\"sha384-…\"` with `crossorigin=\"anonymous\"` to the bootstrap script, knowing that they protect only the loader: the libraries it fetches at run time are still trusted blindly. Keep the pinned version inside maintenance, since the CDN removes versions one year after their end of maintenance.",
+      "references": [
+        "https://ui5.sap.com/#/topic/2d3eb2f322ea4a82983c1c62a33ec4ae",
+        "https://me.sap.com/notes/3001696",
+        "https://owasp.org/Top10/2025/A08_2025-Software_or_Data_Integrity_Failures/"
+      ],
+      "location": {
+        "file": "app/incidents/webapp/test/flpSandbox.html",
+        "line": 9
+      }
+    },
+    {
+      "id": "UI5_BOOTSTRAP_EXTERNAL",
+      "severity": "low",
+      "title": "SAPUI5 loaded from an external CDN without integrity protection",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "app/launchpage.html",
+        "host": "cdn.example.com",
+        "versionForm": "evergreen",
+        "testPage": false,
+        "impact": "minor",
+        "easeOfAttack": "complex"
+      },
+      "remediation": "Serve SAPUI5 through the approuter instead of a public CDN: route `resources/` to the `ui5` destination or to the HTML5 Application Repository, so the version is controlled by the landscape and does not change behind a deployed app. Where the CDN must stay, pin a specific version (`https://ui5.sap.com/1.120.3/resources/sap-ui-core.js`) rather than the evergreen or unversioned form, and add `integrity=\"sha384-…\"` with `crossorigin=\"anonymous\"` to the bootstrap script, knowing that they protect only the loader: the libraries it fetches at run time are still trusted blindly. Keep the pinned version inside maintenance, since the CDN removes versions one year after their end of maintenance.",
+      "references": [
+        "https://ui5.sap.com/#/topic/2d3eb2f322ea4a82983c1c62a33ec4ae",
+        "https://me.sap.com/notes/3001696",
+        "https://owasp.org/Top10/2025/A08_2025-Software_or_Data_Integrity_Failures/"
+      ],
+      "location": {
+        "file": "app/launchpage.html",
+        "line": 6
+      }
+    },
+    {
+      "id": "XSUAA_SCOPE_UNUSED",
+      "severity": "low",
+      "title": "Scope is defined but no role template references it",
+      "app": {
+        "guid": "project:acme-incidents",
+        "name": "acme-incidents",
+        "space": "project",
+        "org": "local"
+      },
+      "evidence": {
+        "subject": "$XSAPPNAME.unused",
+        "source": "xs-security.json",
+        "roleTemplates": 3,
+        "descriptors": 2,
+        "impact": "minor",
+        "easeOfAttack": "complex"
+      },
+      "remediation": "Reference the scope from a role template in the security descriptor, for example `\"role-templates\": [{ \"name\": \"Admin\", \"scope-references\": [\"$XSAPPNAME.admin\"] }]`, so it can be assigned through a role collection, or remove the scope. If another application is meant to call with it, grant it explicitly with `granted-apps` or `grant-as-authority-to-apps`. In a CAP project, regenerate the descriptor with `cds compile srv --to xsuaa` so scopes and role templates stay in step with the roles used in the CDS model.",
+      "references": [
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/application-security-descriptor-configuration-syntax",
+        "https://help.sap.com/docs/btp/sap-business-technology-platform/building-roles-and-role-collections-for-applications",
+        "https://cap.cloud.sap/docs/guides/security/cap-users",
+        "https://owasp.org/Top10/2025/A02_2025-Security_Misconfiguration/"
+      ],
+      "location": {
+        "file": "xs-security.json"
+      }
     }
   ],
   "rules": [
@@ -244,7 +648,7 @@
     {
       "id": "CAP_MOCKED_AUTH_IN_PROD",
       "title": "Mocked authentication is configured for production",
-      "description": "The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). Anyone who knows a mocked user name can act as that user, and dummy authentication accepts every request.",
+      "description": "The effective CAP configuration for the production profile uses a development authentication strategy (mocked, dummy or basic). With mocked, the pre-defined mock users shipped with @sap/cds (one of them an admin) and any other login are accepted unless the project overrides them; basic accepts the users listed in the project files; dummy accepts every request and disables @requires and @restrict.",
       "roles": [],
       "owasp": [
         "A07:2025"
@@ -254,7 +658,7 @@
     {
       "id": "CAP_MOCKED_USER_PASSWORD",
       "title": "Mocked users carry passwords in the project configuration",
-      "description": "Mocked CAP users are defined with a password in a committed configuration file. Passwords in source files travel with every clone and are easy to reuse against other systems.",
+      "description": "Mocked CAP users are defined with a password in a project configuration file (package.json or .cdsrc). Passwords in source files travel with every clone and are easy to reuse against other systems.",
       "roles": [],
       "owasp": [
         "A07:2025"
@@ -274,7 +678,7 @@
     {
       "id": "CAP_AUDITLOG_NOT_BOUND",
       "title": "Audit logging is installed but no audit log service is bound",
-      "description": "The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so audit entries go to the console or are dropped in production.",
+      "description": "The project depends on @cap-js/audit-logging, but the MTA descriptor binds no audit log service, so the plugin cannot connect to an audit log service in production and personal-data accesses fail or go unlogged.",
       "roles": [],
       "owasp": [
         "A09:2025"
@@ -295,7 +699,7 @@
     {
       "id": "CAP_SERVICE_NO_RESTRICTION",
       "title": "Service is open to every authenticated user",
-      "description": "A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and change its data.",
+      "description": "A CDS service declares no @requires or @restrict on the service, its entities or its actions. Every authenticated user, or everyone when authentication is mocked, can read and, unless its entities are read-only, change its data.",
       "roles": [],
       "owasp": [
         "A01:2025"
@@ -316,7 +720,7 @@
     {
       "id": "XSUAA_SCOPE_UNUSED",
       "title": "Scope is defined but no role template references it",
-      "description": "A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so it can never be assigned; such leftovers hide the real authorization model.",
+      "description": "A scope in the XSUAA security descriptor is neither referenced by a role template nor granted to another application, so no role collection can ever carry it; such leftovers hide the real authorization model.",
       "roles": [],
       "owasp": [
         "A02:2025"
@@ -377,12 +781,12 @@
   "summary": {
     "apps": 0,
     "projects": 1,
-    "findings": 3,
+    "findings": 16,
     "findingsBySeverity": {
-      "critical": 1,
-      "high": 0,
-      "medium": 1,
-      "low": 1,
+      "critical": 2,
+      "high": 1,
+      "medium": 9,
+      "low": 4,
       "info": 0
     },
     "checksSkipped": 0

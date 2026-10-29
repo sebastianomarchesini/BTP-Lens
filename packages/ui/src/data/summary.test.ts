@@ -49,16 +49,14 @@ describe('startHereSentences', () => {
     const s = startHereSentences(project);
     expect(s).toEqual([
       'The project acme-incidents was scanned on Sep 29, 2026.',
-      '3 findings need attention: 1 service is open to every authenticated user; 1 approuter route forwards requests without authentication; 1 entity holds personal data without @PersonalData annotations.',
+      '16 findings need attention: 3 pages load SAPUI5 from an external CDN without integrity protection; 2 entities hold personal data without @PersonalData annotations; mocked authentication is configured for production.',
       'Nothing in your project was changed: this scan only read files in the project folder.',
     ]);
   });
 
   it('counts findings, not projects, per project rule', () => {
-    const twice = [
-      project.findings[0]!,
-      { ...project.findings[0]!, location: { file: 'srv/other.cds' } },
-    ];
+    const open = project.findings.find((f) => f.id === 'CAP_SERVICE_NO_RESTRICTION')!;
+    const twice = [open, { ...open, location: { file: 'srv/other.cds' } }];
     const s = startHereSentences({
       ...project,
       findings: twice,

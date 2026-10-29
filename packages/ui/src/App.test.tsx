@@ -94,7 +94,7 @@ describe('report UI', () => {
       .getAllByText(/^(\d+|—)$/)
       .map((el) => el.textContent);
     // Projects scanned, critical + high, services open, entities without annotations
-    expect(values).toEqual(['1', '1', '1', '1']);
+    expect(values).toEqual(['1', '3', '1', '2']);
     expect(document.querySelector('ui5-card-header[title-text="Top risks"]')).not.toBeNull();
     expect(document.querySelector('ui5-card-header[title-text="Top risky apps"]')).toBeNull();
     expect(screen.getByText(/The project acme-incidents was scanned on/)).toBeInTheDocument();
@@ -106,7 +106,8 @@ describe('report UI', () => {
 
   it('counts services, not projects, in the project key figures', async () => {
     const twoServices = structuredClone(projectSample);
-    const second = structuredClone(twoServices.findings[0]!);
+    const open = twoServices.findings.find((f) => f.id === 'CAP_SERVICE_NO_RESTRICTION')!;
+    const second = structuredClone(open);
     second.evidence.subject = 'ProcessorService';
     twoServices.findings.push(second);
     embed(twoServices);
@@ -122,16 +123,29 @@ describe('report UI', () => {
   it('shows file locations and OWASP tags on the findings of a project scan', async () => {
     embed(projectSample);
     renderAt('#/findings');
-    expect(await screen.findByText('srv/services.cds:3')).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(3);
+    expect(await screen.findByText('srv/services.cds:4')).toBeInTheDocument();
+    expect(screen.getAllByRole('article')).toHaveLength(16);
     const locations = [...document.querySelectorAll('code.finding-location')].map(
       (el) => el.textContent,
     );
     // Panels follow the rule order; the line is left out when the rule does not know it.
     expect(locations).toEqual([
-      'db/schema.cds:5',
-      'srv/services.cds:3',
+      'package.json',
+      'package.json',
+      'package.json',
+      'mta.yaml',
+      'db/schema.cds:10',
+      'db/schema.cds:22',
+      'srv/services.cds:4',
+      'srv/services.cds:12',
+      'xs-security.json',
       'app/incidents/xs-app.json',
+      'app/incidents/xs-app.json',
+      'mta_archives/acme-incidents_1.0.0.mtar',
+      'db/data/acme.incidents-Customers.csv',
+      'app/incidents/webapp/index.html:7',
+      'app/incidents/webapp/test/flpSandbox.html:9',
+      'app/launchpage.html:6',
     ]);
     const panel = document.querySelector(
       'ui5-panel[header-text="Service is open to every authenticated user (1) · OWASP A01:2025"]',
@@ -153,7 +167,7 @@ describe('report UI', () => {
     expect(
       await screen.findByText(/Showing findings for project acme-incidents\./),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole('article')).toHaveLength(3);
+    expect(screen.getAllByRole('article')).toHaveLength(16);
   });
 
   it('lists projects without app-only columns or grouping', async () => {

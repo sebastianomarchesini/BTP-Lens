@@ -78,6 +78,32 @@ describe('gitignore patterns', () => {
     expect(isIgnored(layers, 'app/local/x.txt')).toBe(true);
   });
 
+  it('treats repeated **/ the same as one, and keeps ** apart from a following name', () => {
+    expect(parseGitignoreLine('**/**/**/x.mtar')?.tokens).toEqual(
+      parseGitignoreLine('**/x.mtar')?.tokens,
+    );
+    expect(ignored('**/**/x.mtar', 'x.mtar')).toBe(true);
+    expect(ignored('**/**/x.mtar', 'a/b/x.mtar')).toBe(true);
+    expect(ignored('a/**/**/b.mtar', 'a/b.mtar')).toBe(true);
+    expect(ignored('a/**/**/b.mtar', 'a/x/b.mtar')).toBe(true);
+    expect(ignored('a/**/**/b.mtar', 'b.mtar')).toBe(false);
+    // `**x` is not `**/x`: the pair is only dropped when the slash follows.
+    expect(parseGitignoreLine('**/**x')?.tokens).toHaveLength(4);
+  });
+
+  it('matches an unanchored pattern only from a directory boundary, in one pass', () => {
+    // A full-segment match anywhere: yes. A match that starts inside a name: no.
+    expect(ignored('mtar', 'a/x.mtar')).toBe(false);
+    expect(ignored('x.mtar', 'a/b/x.mtar')).toBe(true);
+    expect(ignored('b', 'a/b/c.mtar')).toBe(true);
+    expect(ignored('b*', 'a/xb/c.mtar')).toBe(false);
+    expect(ignored('?.mtar', 'dir/a.mtar')).toBe(true);
+    expect(ignored('?.mtar', 'dir/ab.mtar')).toBe(false);
+    // Seeding a later segment must not let an earlier partial match leak through.
+    expect(ignored('a/', 'xa/b.mtar')).toBe(false);
+    expect(ignored('a', 'x/a/b.mtar')).toBe(true);
+  });
+
   it('does not stall on long patterns and long paths', () => {
     const started = Date.now();
     const layer = root(`${'*'.repeat(500)}a${'?'.repeat(100)}\n${'**/'.repeat(200)}x.mtar`);

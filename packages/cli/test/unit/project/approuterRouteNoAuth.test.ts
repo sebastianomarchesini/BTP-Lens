@@ -204,12 +204,30 @@ describe('APPROUTER_ROUTE_NO_AUTH', () => {
       expect(runRule(approuterRouteNoAuth, project([]))).toEqual([]);
       expect(runRule(approuterRouteNoAuth, project([xsApp(FILE, [])]))).toEqual([]);
     });
+  });
 
-    it('for a source that only resembles an MTX route further in', () => {
-      expect(subjects(runRule(approuterRouteNoAuth, routes([open('^/app/-/cds/(.*)$')])))).toEqual([
-        ['^/app/-/cds/(.*)$', 'medium'],
-      ]);
-    });
+  it('fires for a source that only resembles an MTX route further in', () => {
+    expect(subjects(runRule(approuterRouteNoAuth, routes([open('^/app/-/cds/(.*)$')])))).toEqual([
+      ['^/app/-/cds/(.*)$', 'medium'],
+    ]);
+  });
+
+  it('still fires when an earlier route with the identical source is authenticated', () => {
+    // The collector does not read `httpMethods`, so the later route may still be live.
+    const findings = runRule(
+      approuterRouteNoAuth,
+      routes([{ source: '^/odata/(.*)$', authenticationType: 'xsuaa' }, open('^/odata/(.*)$')]),
+    );
+    expect(subjects(findings)).toEqual([['^/odata/(.*)$', 'high']]);
+  });
+
+  it('fires for a file with authenticationMethod none and no routes', () => {
+    const findings = runRule(
+      approuterRouteNoAuth,
+      project([xsApp(FILE, [], { authenticationMethod: 'none' })]),
+    );
+    expect(subjects(findings)).toEqual([[FILE, 'high']]);
+    expect(findings[0]!.evidence).toMatchObject({ routes: 0 });
   });
 
   it('counts the exempted routes of the file in the evidence', () => {
@@ -317,6 +335,22 @@ describe('APPROUTER_ROUTE_NO_AUTH', () => {
     );
   });
 
+  it('gives the same findings when files and routes arrive in another order', () => {
+    const files = [
+      xsApp('app/b/xs-app.json', [open('^/zeta/(.*)$'), open('^/odata/(.*)$')]),
+      xsApp('app/a/xs-app.json', [open('^/zeta/(.*)$', { targetHint: 'api' })]),
+      xsApp('app/c/xs-app.json', [{ source: '^/(.*)$' }], { authenticationMethod: 'none' }),
+    ];
+    const expected = runRule(approuterRouteNoAuth, project(files));
+    expect(runRule(approuterRouteNoAuth, project([...files].reverse()))).toEqual(expected);
+    expect(
+      runRule(
+        approuterRouteNoAuth,
+        project(files.map((file) => ({ ...file, routes: [...file.routes].reverse() }))),
+      ),
+    ).toEqual(expected);
+  });
+
   it('copies nothing from the project but the route source and the file name', () => {
     const poisoned = rawProject({
       sourcesRead: ['.cdsrc.json', 'package.json'],
@@ -396,5 +430,18 @@ describe('APPROUTER_ROUTE_NO_AUTH', () => {
       easeOfAttack: 'easy',
     });
     expect(findings[0]!.location).toEqual({ file: FILE });
+  });
+
+  it('copies a firing route source and file name only into the subject and the location', () => {
+    const [file, source] = [POISON[0]!, POISON[1]!];
+    const findings = runRule(approuterRouteNoAuth, project([xsApp(file, [open(source)])]));
+    expect(findings).toHaveLength(1);
+    const { location, evidence, ...rest } = findings[0]!;
+    expect(location).toEqual({ file });
+    expect(evidence.subject).toBe(source);
+    const otherEvidence = Object.fromEntries(
+      Object.entries(evidence).filter(([key]) => key !== 'subject'),
+    );
+    expectNoValueLeak([{ ...rest, evidence: otherEvidence }], POISON);
   });
 });

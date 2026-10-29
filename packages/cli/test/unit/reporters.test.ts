@@ -255,14 +255,17 @@ describe('SARIF report', () => {
     });
     const sarif = JSON.parse(renderSarif(data)) as {
       runs: {
-        results: { locations: { physicalLocation: { artifactLocation: { uri: string } } }[] }[];
+        results: {
+          ruleId: string;
+          locations: { physicalLocation: { artifactLocation: { uri: string } } }[];
+        }[];
       }[];
     };
     // The real collector names the project after package.json (btp-lens), not the folder.
     expect(snapshot.scope.projects).toEqual(['btp-lens']);
-    expect(sarif.runs[0]?.results[0]?.locations[0]?.physicalLocation.artifactLocation.uri).toBe(
-      'project/btp-lens',
-    );
+    // The scan of this package yields real findings with files; only the pushed one has none.
+    const result = sarif.runs[0]?.results.find((r) => r.ruleId === 'TEST_RULE');
+    expect(result?.locations[0]?.physicalLocation.artifactLocation.uri).toBe('project/btp-lens');
   });
 });
 

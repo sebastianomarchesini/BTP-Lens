@@ -31,6 +31,11 @@ In the BTP cockpit the administrator does this under **Cloud Foundry Environment
 | planned: audit events | `GET /v3/audit_events` | Space Auditor or Org Auditor | on |
 | planned: app usage events | `GET /v3/app_usage_events` | not documented for BTP; skipped on 403 | on |
 | planned: `ENV_SECRET_PLAINTEXT` | `GET /v3/apps/:guid/environment_variables` (names only) | Space Developer or Space Supporter | `--deep` |
+| `collect.project` and the thirteen `rule.CAP_*`, `rule.XSUAA_*`, `rule.APPROUTER_*`, `rule.DEPLOY_*`, `rule.SEED_*`, `rule.UI5_BOOTSTRAP_*` checks | local project files (`btp-lens project --path <dir>`), see [data-sources.md §8](data-sources.md#8-local-project-files-btp-lens-project) | **no CF role**: no login, no network | on, for `project` only |
+
+## `btp-lens project`
+
+A project scan reads a local CAP or MTA project directory and needs **no Cloud Foundry role and no BTP login**: it makes no network request. It only needs read permission on the project files; a file it cannot read is recorded as unreadable with a reason code, and the scan continues. The output folder (`--out`) is skipped by the file walk, so a report written into the project is never scanned.
 
 **Not used at all:** `GET /v3/apps/:guid/env` (it returns service credentials) and `GET /v3/service_credential_bindings/:guid/details`.
 

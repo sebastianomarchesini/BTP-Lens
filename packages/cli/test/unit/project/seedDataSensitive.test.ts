@@ -218,6 +218,41 @@ describe('SEED_DATA_SENSITIVE', () => {
     expect(findings[0]!.evidence).toMatchObject({ rowsMatching: 4 });
   });
 
+  it('picks the same entry for a repeated subject whatever the order, when the counts tie', () => {
+    // A snapshot edited by hand may list one subject twice with equal counts;
+    // the collector itself gives one kind per column name.
+    const secret = { column: 'token', kind: 'secret' as const, rowsMatching: 2 };
+    const card = { column: 'token', kind: 'card' as const, rowsMatching: 2 };
+    const forward = runRule(
+      seedDataSensitive,
+      project([seedCsv('db/data/X.csv', { sensitiveColumns: [secret, card] })]),
+    );
+    const backward = runRule(
+      seedDataSensitive,
+      project([seedCsv('db/data/X.csv', { sensitiveColumns: [card, secret] })]),
+    );
+    expect(forward).toHaveLength(1);
+    expect(forward[0]!.evidence).toMatchObject({ kind: 'card', rowsMatching: 2 });
+    expect(forward[0]!.title).toBe('Seed data contains payment card numbers');
+    expect(backward).toEqual(forward);
+  });
+
+  it('reports the larger row count for a file listed twice, whatever the order', () => {
+    const fewer = seedCsv(CUSTOMERS, {
+      rowsChecked: 5,
+      sensitiveColumns: [{ column: 'iban', kind: 'iban', rowsMatching: 1 }],
+    });
+    const more = seedCsv(CUSTOMERS, {
+      rowsChecked: 9,
+      sensitiveColumns: [{ column: 'iban', kind: 'iban', rowsMatching: 1 }],
+    });
+    const forward = runRule(seedDataSensitive, project([fewer, more]));
+    const backward = runRule(seedDataSensitive, project([more, fewer]));
+    expect(forward).toHaveLength(1);
+    expect(forward[0]!.evidence).toMatchObject({ rowsChecked: 9, rowsMatching: 1 });
+    expect(backward).toEqual(forward);
+  });
+
   it('orders findings the same whatever the collector order', () => {
     const a = seedCsv('db/data/B.csv', {
       sensitiveColumns: [

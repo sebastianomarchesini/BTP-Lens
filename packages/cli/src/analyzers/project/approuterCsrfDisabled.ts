@@ -10,11 +10,12 @@ const SEVERITY: MatrixSeverity = { impact: 'moderate', easeOfAttack: 'advanced' 
 
 const REMEDIATION =
   'Remove `"csrfProtection": false` from the route in xs-app.json (the default is `true`), so the ' +
-  'application router rejects PUT, POST, PATCH and DELETE requests that carry no valid `x-csrf-token` ' +
-  'header. Clients obtain the token with a GET or HEAD request that sends `x-csrf-token: fetch`; ' +
-  'the SAPUI5 OData models and the CAP Fiori preview do this on their own. If the route only ever ' +
-  'serves GET and HEAD, CSRF protection costs nothing, so there is no reason to switch it off. ' +
-  'If `cds add app-frontend` generated the route, set the flag back to `true` after generating.';
+  'application router answers 403 to every request other than GET and HEAD (PUT, POST, PATCH, ' +
+  'DELETE, ...) that carries no valid `x-csrf-token` header. Clients obtain the token with a GET or ' +
+  'HEAD request that sends `x-csrf-token: fetch`; the SAPUI5 OData models and the CAP Fiori preview ' +
+  'do this on their own. If the route only ever serves GET and HEAD, CSRF protection costs nothing, ' +
+  'so there is no reason to switch it off. If `cds add app-frontend` generated the route, set the ' +
+  'flag back to `true` after generating and let the frontend fetch the token.';
 
 const REFERENCES = [
   'https://help.sap.com/docs/btp/sap-business-technology-platform/routes',

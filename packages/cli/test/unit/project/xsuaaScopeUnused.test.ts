@@ -224,6 +224,34 @@ describe('XSUAA_SCOPE_UNUSED', () => {
     expect(findings[0]!.evidence).toMatchObject({ source: 'mta.yaml', descriptors: 2 });
   });
 
+  it('treats a scope spelt with and without the prefix in two descriptors as one scope', () => {
+    const findings = runRule(
+      xsuaaScopeUnused,
+      project([
+        xsSecurity({ file: 'xs-security.json', scopes: ['$XSAPPNAME.unused'] }),
+        xsSecurity({ file: 'mta.yaml', source: 'mta.yaml', scopes: ['unused'] }),
+      ]),
+    );
+    expect(subjects(findings)).toEqual([['unused', 'low']]);
+    expect(findings[0]!.location).toEqual({ file: 'mta.yaml' });
+  });
+
+  it('does not depend on the order of descriptors that share a file and source', () => {
+    // Two xsuaa resources in one mta.yaml both define the scope; the richer one is the location.
+    const sparse = xsSecurity({ file: 'mta.yaml', source: 'mta.yaml', scopes: ['$XSAPPNAME.x'] });
+    const rich = xsSecurity({
+      file: 'mta.yaml',
+      source: 'mta.yaml',
+      scopes: ['$XSAPPNAME.x', '$XSAPPNAME.y'],
+      roleTemplates: [['Y', ['$XSAPPNAME.y']]],
+    });
+    const forward = runRule(xsuaaScopeUnused, project([sparse, rich]));
+    const reversed = runRule(xsuaaScopeUnused, project([rich, sparse]));
+    expect(reversed).toEqual(forward);
+    expect(subjects(forward)).toEqual([['$XSAPPNAME.x', 'low']]);
+    expect(forward[0]!.evidence).toMatchObject({ roleTemplates: 1, descriptors: 2 });
+  });
+
   it('reports each project on its own', () => {
     const findings = runRule(
       xsuaaScopeUnused,
@@ -242,9 +270,10 @@ describe('XSUAA_SCOPE_UNUSED', () => {
     ]);
   });
 
-  it('links the SAP Help role topic, the CAP users guide and OWASP A02:2025', () => {
+  it('links the SAP Help descriptor and role topics, the CAP users guide and OWASP A02:2025', () => {
     const finding = runRule(xsuaaScopeUnused, project([descriptor()]))[0]!;
     expect(finding.references).toEqual([
+      'https://help.sap.com/docs/btp/sap-business-technology-platform/application-security-descriptor-configuration-syntax',
       'https://help.sap.com/docs/btp/sap-business-technology-platform/building-roles-and-role-collections-for-applications',
       'https://cap.cloud.sap/docs/guides/security/cap-users',
       owaspUrl('A02:2025'),

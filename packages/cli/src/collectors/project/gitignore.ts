@@ -72,7 +72,31 @@ export function tokenizeGlob(glob: string): GlobToken[] {
       i += 1;
     }
   }
-  return tokens;
+  return collapseGlobstars(tokens);
+}
+
+/**
+ * `**` followed by `/` matches any run of directories, so `a/**` + `/**` + `/x`
+ * means the same as `a/**` + `/x`: repeated `**` + `/` pairs are dropped. The
+ * matcher's cost is tokens × path length, and a hostile pattern of hundreds of
+ * `**` + `/` pairs would otherwise pay for every one of them.
+ */
+function collapseGlobstars(tokens: GlobToken[]): GlobToken[] {
+  const out: GlobToken[] = [];
+  const isSlash = (token: GlobToken | undefined): boolean =>
+    token?.kind === 'char' && token.char === '/';
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token === undefined) continue;
+    const pair = token.kind === 'globstar' && isSlash(tokens[i + 1]);
+    const repeated = pair && out.at(-2)?.kind === 'globstar' && isSlash(out.at(-1));
+    if (repeated) {
+      i += 1;
+      continue;
+    }
+    out.push(token);
+  }
+  return out;
 }
 
 function classMatches(token: Extract<GlobToken, { kind: 'class' }>, c: string): boolean {
@@ -104,14 +128,17 @@ function tokenMatches(token: GlobToken, c: string): boolean {
 }
 
 /**
- * Whether the tokens match the whole path. Dynamic programming over
- * (token, position): each cell is computed once, so the cost is the product
- * of the two lengths whatever the pattern.
+ * Whether the tokens match the whole path, or, with `anySegment`, the path
+ * from any directory boundary on (what an unanchored pattern means). Dynamic
+ * programming over (token, position): each cell is computed once, so the
+ * cost is the product of the two lengths whatever the pattern, and an
+ * unanchored pattern costs one pass, not one per segment: every segment
+ * start re-seeds the first token instead of restarting the match.
  */
-export function globMatches(tokens: GlobToken[], path: string): boolean {
+export function globMatches(tokens: GlobToken[], path: string, anySegment = false): boolean {
   // reachable[j] = the first j tokens can consume the path up to the current position.
   let reachable: boolean[] = new Array<boolean>(tokens.length + 1).fill(false);
-  reachable[0] = true;
+  let next: boolean[] = new Array<boolean>(tokens.length + 1).fill(false);
   const closeStars = (row: boolean[], position: number): void => {
     for (let j = 0; j < tokens.length; j += 1) {
       const token = tokens[j];
@@ -125,10 +152,15 @@ export function globMatches(tokens: GlobToken[], path: string): boolean {
       } else if (token.kind === 'star') row[j + 1] = true;
     }
   };
+  reachable[0] = true;
   closeStars(reachable, 0);
   for (let position = 0; position < path.length; position += 1) {
+    if (anySegment && position > 0 && path[position - 1] === '/' && !reachable[0]) {
+      reachable[0] = true;
+      closeStars(reachable, position);
+    }
     const c = path[position] ?? '';
-    const next: boolean[] = new Array<boolean>(tokens.length + 1).fill(false);
+    next.fill(false);
     for (let j = 0; j < tokens.length; j += 1) {
       const token = tokens[j];
       if (!reachable[j] || token === undefined) continue;
@@ -138,7 +170,7 @@ export function globMatches(tokens: GlobToken[], path: string): boolean {
       } else if (tokenMatches(token, c)) next[j + 1] = true;
     }
     closeStars(next, position + 1);
-    reachable = next;
+    [reachable, next] = [next, reachable];
   }
   return reachable[tokens.length] === true;
 }
@@ -182,14 +214,7 @@ export function parseGitignore(text: string): GitignoreRule[] {
 
 /** An unanchored pattern matches the whole path or any trailing part after a `/`. */
 function ruleMatches(rule: GitignoreRule, path: string): boolean {
-  if (rule.anchored) return globMatches(rule.tokens, path);
-  let from = 0;
-  for (;;) {
-    if (globMatches(rule.tokens, path.slice(from))) return true;
-    const slash = path.indexOf('/', from);
-    if (slash === -1) return false;
-    from = slash + 1;
-  }
+  return globMatches(rule.tokens, path, !rule.anchored);
 }
 
 /** The decision of the last matching rule across the layers, or null when none matches. */

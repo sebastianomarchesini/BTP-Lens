@@ -178,6 +178,8 @@ No, and those certifications would not apply in the usual way. They certify an o
 - It applies one rule, `APP_NO_RECENT_DEPLOY`: the last deployment is older than 12 months.
 - It writes HTML, JSON, CSV and SARIF reports.
 
+Since 0.1.0 (unreleased, on `main`): `btp-lens project --path <dir>` checks a local CAP or MTA project against thirteen configuration and model rules tagged with the OWASP Top 10 (2025) categories, without any login or network access ([rules.md](rules.md#project-rules), [privacy.md](privacy.md#project-scans)).
+
 The other rules and the `sbom` command are designed and documented in [rules.md](rules.md) and arrive in the next releases ([roadmap](roadmap.md)). Those rules cover end-of-life runtimes and stacks, outdated buildpacks, idle apps, SAPUI5 maintenance, outdated `@sap/*` packages, known CVEs and plain-text secrets. Treat 0.1.0 as an inventory and a first health signal, not as a full security assessment.
 
 ### How reliable are the results?
