@@ -1,14 +1,16 @@
 import type { CheckDefinition } from '../checks.js';
 import type { AppRef, Finding } from '../model/finding.js';
-import type { RawData } from '../model/raw.js';
+import type { RawData, RawProject } from '../model/raw.js';
 import type { RuleMeta } from '../model/snapshot.js';
 
 export interface AnalyzerContext {
   /** Reference time: the scan time, so offline re-analysis is reproducible. */
   now: Date;
   raw: RawData;
-  /** Resolves an app guid to the names used in findings. */
+  /** Resolves an app guid (or a `project:<id>` guid) to the names used in findings. */
   appRef: (appGuid: string) => AppRef | undefined;
+  /** The names a finding about a local project carries. */
+  projectRef: (project: RawProject) => AppRef;
 }
 
 /** A rule: a pure function from raw scan data to findings. */
@@ -28,6 +30,24 @@ export function ruleHelpUri(ruleId: string): string {
 
 export function ruleCheck(rule: RuleMeta): CheckDefinition {
   return { id: `rule.${rule.id}`, title: rule.title, roles: rule.roles };
+}
+
+export const PROJECT_GUID_PREFIX = 'project:';
+
+/** Projects have no CF org or space; these fixed names keep the finding shape uniform. */
+export function projectRef(project: RawProject): AppRef {
+  return {
+    guid: `${PROJECT_GUID_PREFIX}${project.id}`,
+    name: project.id,
+    space: 'project',
+    org: 'local',
+  };
+}
+
+/** `evidence.subject` as text: project rules set a string; anything else counts as absent. */
+export function findingSubject(finding: Finding): string {
+  const subject = finding.evidence.subject;
+  return typeof subject === 'string' || typeof subject === 'number' ? String(subject) : '';
 }
 
 export const DAY_MS = 24 * 60 * 60 * 1000;

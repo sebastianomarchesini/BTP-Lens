@@ -13,7 +13,7 @@ Dates are relative to **L = the day v0.1.0 is on npm**. Updated 2026-09-30; the 
 | Read-only, GET-only, allow-listed | **Shipped** (slice 1) and re-reviewed; credential endpoints now refused even for GET | `packages/cli/src/net/allowlist.ts`, `docs/security-review.md` |
 | Report cannot phone home | **Shipped**: CSP `connect-src 'none'` in the HTML, Playwright test with networking disabled | `e2e/offline-report.spec.ts` |
 | Five minutes, no flags, for administrators | **Shipped on the development branch**: guided mode, `doctor`, "Start here" panel, no-terminal guide, FAQ | `docs/ease-of-use.md` §8 |
-| Nine rules | **1 of 9** (`APP_NO_RECENT_DEPLOY`); the rest are the next slices | `docs/rules.md` |
+| Nine CF rules | **1 of 9** (`APP_NO_RECENT_DEPLOY`); the rest are the next slices. **Thirteen project rules shipped on `main`** after 0.1.0 (`btp-lens project`, OWASP Top 10 2025 tags; see `CHANGELOG.md`) | `docs/rules.md` |
 | Public sample report | Workflow ready (`.github/workflows/pages.yml`); needs Pages enabled once | landing page in `docs/marketing/landing.html` |
 | Sponsor button | `FUNDING.yml` and `SPONSORS.md` ready; needs GitHub Sponsors enrolment | — |
 | npm name | **Still unclaimed** on 2026-09-30. Reserve before the first public post. | `npm view btp-lens` |

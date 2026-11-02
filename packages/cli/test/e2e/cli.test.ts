@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -61,6 +61,38 @@ describe('btp-lens CLI', () => {
     expect(c.err()).toContain('Credentials: BTP_LENS_ACCESS_TOKEN');
     // SEC-22: the sharing warning is printed once per scan.
     expect(c.out().match(/do not commit them/g)).toHaveLength(1);
+  });
+
+  it('scans a local project directory without the network and names the project', async () => {
+    const project = await tmp();
+    await writeFile(join(project, 'package.json'), '{ "name": "acme-incidents" }\n');
+    const out = await tmp();
+    const c = capture();
+    c.io.fetch = () => Promise.reject(new Error('network must not be used'));
+    const args = ['project', '--path', project, '--out', out, '--format', 'json'];
+    expect(await main(args, c.io)).toBe(EXIT.ok);
+    const report = JSON.parse(await readFile(join(out, 'btp-lens-report.json'), 'utf8')) as {
+      summary: { apps: number; projects: number };
+      scope: { orgs: string[]; projects?: string[]; apiEndpoint?: string };
+      apps: { kind: string; guid: string }[];
+    };
+    expect(report.summary).toMatchObject({ apps: 0, projects: 1 });
+    expect(report.scope.orgs).toEqual([]);
+    expect(report.scope.apiEndpoint).toBeUndefined();
+    expect(report.apps).toMatchObject([
+      { kind: 'project', guid: `project:${report.scope.projects?.[0]}` },
+    ]);
+    expect(c.out()).toMatch(/^Scanned project [A-Za-z0-9._-]+: \d+ finding\(s\) \(/);
+    expect(c.out()).toContain('Reports describe your project');
+    expect(c.out()).not.toContain('app(s) in');
+    expect(c.err()).toMatch(/Read 1 project file\(s\) in project /);
+    expect(c.err()).not.toContain(project);
+  });
+
+  it('exits 2 when --path is missing', async () => {
+    const c = capture();
+    expect(await main(['project'], c.io)).toBe(EXIT.error);
+    expect(c.err()).toContain("required option '--path <dir>' not specified");
   });
 
   it('exits 1 when findings meet --fail-on', async () => {

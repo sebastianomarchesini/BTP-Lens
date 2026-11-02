@@ -74,6 +74,12 @@ export const ReportConfigSchema = CommonSchema.extend({
 });
 export type ReportConfig = z.infer<typeof ReportConfigSchema>;
 
+export const ProjectConfigSchema = CommonSchema.extend({
+  path: z.string().min(1, '--path is required'),
+  quiet: z.boolean(),
+});
+export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
+
 function parseOrThrow<T>(schema: z.ZodType<T>, input: unknown): T {
   const result = schema.safeParse(input);
   if (!result.success) {
@@ -86,6 +92,8 @@ export const parseScanConfig = (input: unknown): ScanConfig =>
   parseOrThrow(ScanConfigSchema, input);
 export const parseReportConfig = (input: unknown): ReportConfig =>
   parseOrThrow(ReportConfigSchema, input);
+export const parseProjectConfig = (input: unknown): ProjectConfig =>
+  parseOrThrow(ProjectConfigSchema, input);
 
 export function failThreshold(failOn: FailOn): Severity | undefined {
   return failOn === 'none' ? undefined : failOn;

@@ -49,6 +49,7 @@ function raw(ages: Record<string, number | null>): RawData {
     droplets: Object.entries(ages)
       .filter((entry): entry is [string, number] => entry[1] !== null)
       .map(([name, age]) => droplet(name, age)),
+    projects: [],
   };
 }
 
@@ -89,7 +90,7 @@ describe('APP_NO_RECENT_DEPLOY', () => {
 });
 
 describe('analyze', () => {
-  it('skips a rule whose collector did not run', () => {
+  it('records a rule as skipped when its collector was part of the scan but did not run', () => {
     const checks: CheckResult[] = [
       collectorsRan[0]!,
       { ...collectorsRan[1]!, status: 'skipped', reasonCode: 'insufficient_role' },

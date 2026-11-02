@@ -282,7 +282,8 @@
         "image": "registry.example.org/acme/worker:1.4",
         "buildpacks": []
       }
-    ]
+    ],
+    "projects": []
   },
   "apps": [
     {
@@ -290,6 +291,7 @@
       "name": "legacy-reporting",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STOPPED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs3",
@@ -317,6 +319,7 @@
       "name": "docs-static",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -344,6 +347,7 @@
       "name": "orders-approuter",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -371,6 +375,7 @@
       "name": "custom-bp-app",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -398,6 +403,7 @@
       "name": "docker-worker",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "docker",
       "stack": null,
@@ -420,6 +426,7 @@
       "name": "inventory-java",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -447,6 +454,7 @@
       "name": "never-staged",
       "org": "acme-prod",
       "space": "dev",
+      "kind": "app",
       "state": "STOPPED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",
@@ -469,6 +477,7 @@
       "name": "orders-srv",
       "org": "acme-prod",
       "space": "prod",
+      "kind": "app",
       "state": "STARTED",
       "lifecycleType": "buildpack",
       "stack": "cflinuxfs4",

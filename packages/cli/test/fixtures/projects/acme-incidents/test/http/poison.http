@@ -1,0 +1,6 @@
+@server = http://localhost:4004
+@password = POISON_http
+
+### Admin: list customers
+GET {{server}}/odata/v4/admin/Customers
+Authorization: Basic alice:{{password}}

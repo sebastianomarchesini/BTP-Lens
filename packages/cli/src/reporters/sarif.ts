@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { PROJECT_GUID_PREFIX, findingSubject } from '../analyzers/types.js';
 import type { Finding } from '../model/finding.js';
 import type { Severity } from '../model/severity.js';
 import type { ReportData } from '../model/snapshot.js';
@@ -22,14 +23,38 @@ const SECURITY_SEVERITY: Record<Severity, string> = {
   info: '0.0',
 };
 
-/** Cloud resources have no file; this stable pseudo-path locates the app. */
+/** Cloud resources have no file; this stable pseudo-path locates the app or project. */
 function appUri(finding: Finding): string {
   const part = (s: string) => encodeURIComponent(s);
+  if (finding.app.guid.startsWith(PROJECT_GUID_PREFIX)) return `project/${part(finding.app.name)}`;
   return `cf/${part(finding.app.org)}/${part(finding.app.space)}/${part(finding.app.name)}`;
 }
 
+/**
+ * Stable per finding across scans, so code scanning keeps alert history. CF
+ * findings keep the 0.1 input (`id:guid`) byte for byte; a file or subject is
+ * appended only when present, so one rule can report several places in one
+ * project without the alerts collapsing into one.
+ */
 function fingerprint(finding: Finding): string {
-  return createHash('sha256').update(`${finding.id}:${finding.app.guid}`).digest('hex');
+  const subject = findingSubject(finding);
+  const file = finding.location?.file;
+  const located = file !== undefined || subject !== '';
+  const input = `${finding.id}:${finding.app.guid}` + (located ? `:${file ?? ''}:${subject}` : '');
+  return createHash('sha256').update(input).digest('hex');
+}
+
+/**
+ * A project finding points at its file relative to the project root; the
+ * base id is left for the consumer, so no absolute path is ever written.
+ */
+function physicalLocation(finding: Finding): Record<string, unknown> {
+  const location = finding.location;
+  if (location === undefined) return { artifactLocation: { uri: appUri(finding) } };
+  return {
+    artifactLocation: { uri: location.file, uriBaseId: 'PROJECTROOT' },
+    ...(location.line === undefined ? {} : { region: { startLine: location.line } }),
+  };
 }
 
 /** SARIF 2.1.0 log with one run. */
@@ -56,7 +81,9 @@ export function renderSarif(data: ReportData): string {
               helpUri: rule.helpUri,
               help: { text: `${rule.description} See ${rule.helpUri}` },
               defaultConfiguration: { level: LEVEL[worst.get(rule.id) ?? 'low'] },
-              properties: { tags: ['cloud-foundry', 'btp'] },
+              properties: {
+                tags: ['cloud-foundry', 'btp', ...rule.owasp.map((id) => `owasp/${id}`)],
+              },
             })),
           },
         },
@@ -81,7 +108,7 @@ export function renderSarif(data: ReportData): string {
           },
           locations: [
             {
-              physicalLocation: { artifactLocation: { uri: appUri(finding) } },
+              physicalLocation: physicalLocation(finding),
               logicalLocations: [
                 {
                   name: finding.app.name,
@@ -91,7 +118,10 @@ export function renderSarif(data: ReportData): string {
               ],
             },
           ],
-          partialFingerprints: { 'btpLensFinding/v1': fingerprint(finding) },
+          partialFingerprints: {
+            'btpLensFinding/v1': fingerprint(finding),
+            primaryLocationLineHash: fingerprint(finding),
+          },
           properties: {
             'security-severity': SECURITY_SEVERITY[finding.severity],
             severity: finding.severity,

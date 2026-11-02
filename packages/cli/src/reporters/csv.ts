@@ -34,6 +34,8 @@ function toCsv(header: string[], rows: unknown[][]): string {
 }
 
 export function renderFindingsCsv(data: ReportData): string {
+  const owasp = new Map(data.rules.map((rule) => [rule.id, rule.owasp.join(' ')]));
+  // New columns go last, so existing spreadsheets and scripts keep their positions.
   return toCsv(
     [
       'rule_id',
@@ -46,6 +48,9 @@ export function renderFindingsCsv(data: ReportData): string {
       'remediation',
       'references',
       'evidence',
+      'owasp',
+      'file',
+      'line',
     ],
     data.findings.map((f) => [
       f.id,
@@ -58,6 +63,9 @@ export function renderFindingsCsv(data: ReportData): string {
       f.remediation,
       f.references.join(' '),
       f.evidence,
+      owasp.get(f.id) ?? '',
+      f.location?.file ?? '',
+      f.location?.line ?? '',
     ]),
   );
 }
@@ -81,6 +89,7 @@ export function renderAppsCsv(data: ReportData): string {
       'medium',
       'low',
       'info',
+      'kind',
     ],
     data.apps.map((a) => [
       a.org,
@@ -99,6 +108,7 @@ export function renderAppsCsv(data: ReportData): string {
       a.findingCounts.medium,
       a.findingCounts.low,
       a.findingCounts.info,
+      a.kind,
     ]),
   );
 }

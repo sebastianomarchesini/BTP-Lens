@@ -22,6 +22,12 @@ export const COLLECTOR_CHECKS = {
     title: 'Current droplets (GET /v3/droplets?current=true)',
     roles: ['SpaceAuditor'],
   },
+  project: {
+    id: 'collect.project',
+    title:
+      'Project files (package.json, .cdsrc, mta.yaml, xs-security.json, xs-app.json, *.cds, seed CSV, *.html)',
+    roles: [],
+  },
 } as const satisfies Record<string, CheckDefinition>;
 
 function roleText(roles: readonly CfRole[]): string {

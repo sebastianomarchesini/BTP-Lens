@@ -1,0 +1,37 @@
+_schema-version: '3.1'
+ID: clean-cap
+version: 1.0.0
+modules:
+  - name: clean-cap-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: clean-cap-auth
+      - name: clean-cap-db
+      - name: clean-cap-auditlog
+  - name: clean-cap-db-deployer
+    type: hdb
+    path: gen/db
+    parameters:
+      buildpack: nodejs_buildpack
+    requires:
+      - name: clean-cap-db
+resources:
+  - name: clean-cap-auth
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+  - name: clean-cap-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+  - name: clean-cap-auditlog
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: auditlog
+      service-plan: oauth2

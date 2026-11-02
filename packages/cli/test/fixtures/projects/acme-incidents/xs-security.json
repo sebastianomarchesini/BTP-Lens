@@ -1,0 +1,29 @@
+{
+  "xsappname": "acme-incidents",
+  "tenant-mode": "dedicated",
+  "description": "owner jane.poison@example.com",
+  "scopes": [
+    { "name": "$XSAPPNAME.admin", "description": "Administer incidents" },
+    { "name": "$XSAPPNAME.support", "description": "Process incidents" },
+    { "name": "$XSAPPNAME.unused", "description": "Nobody references this scope" },
+    {
+      "name": "$XSAPPNAME.callback",
+      "description": "Granted to the provisioning app",
+      "grant-as-authority-to-apps": ["$XSAPPNAME(application,sap-provisioning,tenant-onboarding)"]
+    }
+  ],
+  "attributes": [{ "name": "region", "description": "Region of the user", "valueType": "string" }],
+  "role-templates": [
+    { "name": "admin", "description": "Administrator", "scope-references": ["$XSAPPNAME.admin"] },
+    { "name": "support", "description": "Support agent", "scope-references": ["$XSAPPNAME.support"] },
+    {
+      "name": "Token_Exchange",
+      "description": "UAA",
+      "scope-references": ["uaa.user"],
+      "foreign-scope-references": ["$XSAPPNAME(application,poison-foreign).read"]
+    }
+  ],
+  "oauth2-configuration": {
+    "redirect-uris": ["https://poison-redirect.example.com/**"]
+  }
+}

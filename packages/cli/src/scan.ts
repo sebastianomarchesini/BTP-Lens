@@ -109,6 +109,7 @@ export async function scan(options: ScanOptions): Promise<Snapshot> {
     spaces,
     apps: appItems,
     droplets: (droplets?.items ?? []).filter((d: RawDroplet) => appGuids.has(d.appGuid)),
+    projects: [],
   };
   log(`Collected ${raw.apps.length} app(s)`);
 

@@ -23,6 +23,11 @@ Moved to the 0.1.x and 0.2 releases:
 - [ ] Three usability sessions with non-developers (0.1.0 shipped without them, for developers and platform teams; due before 0.1.1)
 - [x] npm publish with provenance; GitHub release with changelog (tag-triggered `release.yml`)
 
+Done since 0.1.0 (unreleased, see the [changelog](../CHANGELOG.md)):
+
+- [x] `btp-lens project --path <dir>`: a read-only scan of a local CAP or MTA project with thirteen rules derived from the OWASP Top 10 (2025) patterns of the SAP TechEd 2026 XP261 workshop, OWASP tags on every rule, a criticality matrix, `file:line` locations in the reports and SARIF
+- [x] XSUAA scope analysis for the project scan (`CAP_ROLE_NOT_IN_XSUAA`, `XSUAA_SCOPE_UNUSED`); the Cloud Foundry side (bound xsuaa instances) stays in v0.2
+
 ## v0.1.1
 
 Small items left open by the [pre-release audit](audits/2026-10-11-release-0.1.0-audit.md), all low severity; each is a self-contained change with a test:
@@ -39,7 +44,9 @@ Small items left open by the [pre-release audit](audits/2026-10-11-release-0.1.0
 - Single executables for Windows and macOS (Node single-executable application), signed once funding allows
 - GitHub Action wrapper (`action.yml`) with SARIF upload to code scanning
 - Opt-in user usage from the SAP Audit Log service, hashed and aggregated; log-cache request metrics
-- XSUAA scope analysis
+- XSUAA scope analysis of the bound instances in a Cloud Foundry scan (the project scan already checks the security descriptor)
+- `--accept-risks <file>`: a committed list of accepted findings (rule id and subject, with a reason and an expiry) that the project scan and `--fail-on` leave out but still list as accepted
+- `report --compare <older snapshot>`: new, fixed and unchanged findings between two snapshots
 - App detail and Scan info screens in the report; print stylesheet; glossary
 - `BTP_LENS_CLIENT_SECRET_FILE` for CI secret managers
 

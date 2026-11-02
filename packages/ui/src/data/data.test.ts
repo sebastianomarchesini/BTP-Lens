@@ -1,8 +1,9 @@
-import type { ReportData } from '@btp-lens/model';
+import type { AppInventoryItem, ReportData } from '@btp-lens/model';
 import { describe, expect, it } from 'vitest';
 import sample from '../test/fixtures/report.json';
 import { resolveTheme } from '../ui5/theme';
 import { formatDate, formatEvidenceValue } from './format';
+import { lastDeploySortValue, lastDeployText, stateText } from './inventory';
 import { DATA_ELEMENT_ID, readEmbeddedReport } from './report';
 import { SEVERITY_ORDER, SEVERITY_STATE, severityRank } from './severity';
 
@@ -56,6 +57,31 @@ describe('theme', () => {
     expect(resolveTheme('auto', false)).toBe('sap_horizon');
     expect(resolveTheme('light', true)).toBe('sap_horizon');
     expect(resolveTheme('dark', false)).toBe('sap_horizon_dark');
+  });
+});
+
+describe('inventory cells', () => {
+  const app = sample.apps[0] as unknown as AppInventoryItem;
+  const project: AppInventoryItem = {
+    ...app,
+    kind: 'project',
+    state: null,
+    lastDeployAt: null,
+  };
+
+  it('shows a dash for what does not apply to a project', () => {
+    expect(stateText(app)).toBe('STOPPED');
+    expect(stateText({ ...app, state: null })).toBe('—');
+    expect(stateText(project)).toBe('—');
+    expect(lastDeployText(app)).toBe('Mar 15, 2024');
+    expect(lastDeployText({ ...app, lastDeployAt: null })).toBe('Never');
+    expect(lastDeployText(project)).toBe('—');
+  });
+
+  it('sorts last deploy by the ISO timestamp', () => {
+    expect(lastDeploySortValue(app)).toBe('2024-03-15T08:00:00Z');
+    expect(lastDeploySortValue({ ...app, lastDeployAt: null })).toBe('');
+    expect(lastDeploySortValue(project)).toBe('—');
   });
 });
 

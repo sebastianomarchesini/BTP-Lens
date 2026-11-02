@@ -13,6 +13,7 @@ export default tseslint.config(
       'reports/**',
       'playwright-report/**',
       'test-results/**',
+      'packages/cli/test/fixtures/**',
     ],
   },
   js.configs.recommended,

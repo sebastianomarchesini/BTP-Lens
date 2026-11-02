@@ -1,0 +1,36 @@
+{
+  "name": "clean-cap",
+  "version": "1.0.0",
+  "description": "Minimal CAP project that follows the recommended practices (btp-lens test fixture)",
+  "private": true,
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
+    "@cap-js/audit-logging": "^0.8",
+    "express": "^4"
+  },
+  "devDependencies": {
+    "@cap-js/sqlite": "^2"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "cds": {
+    "requires": {
+      "auth": {
+        "[production]": { "kind": "xsuaa" },
+        "[development]": {
+          "kind": "mocked",
+          "users": {
+            "alice": { "roles": ["admin"] },
+            "bob": { "roles": ["viewer"] }
+          }
+        }
+      },
+      "audit-log": {
+        "[production]": { "kind": "audit-log-to-restv2" },
+        "[development]": { "kind": "audit-log-to-console" }
+      }
+    }
+  }
+}

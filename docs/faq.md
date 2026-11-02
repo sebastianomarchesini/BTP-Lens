@@ -36,7 +36,7 @@ No. BTP Lens is an independent open-source project (Apache-2.0). It is not affil
 
 ### I am a developer. Do I have to use the wizard?
 
-No. `btp-lens scan --api <url> --org <name>` does the same without questions, reads your cf CLI session or `BTP_LENS_ACCESS_TOKEN`, and has `--fail-on` for CI. See the [README](../README.md#commands).
+No. `btp-lens scan --api <url> --org <name>` does the same without questions, reads your cf CLI session or `BTP_LENS_ACCESS_TOKEN`, and has `--fail-on` for CI. `btp-lens project --path <dir>` checks a local CAP or MTA project folder without any login or network access. See the [README](../README.md#commands).
 
 ### What does it cost?
 

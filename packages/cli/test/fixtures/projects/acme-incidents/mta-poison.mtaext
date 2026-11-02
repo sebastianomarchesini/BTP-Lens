@@ -1,0 +1,7 @@
+_schema-version: '3.1'
+ID: acme-incidents-ext
+extends: acme-incidents
+modules:
+  - name: acme-incidents-srv
+    properties:
+      APP_SECRET: POISON_mtaext

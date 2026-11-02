@@ -17,7 +17,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import logoUrl from '../assets/icon.png';
 import { formatDateTime } from '../data/format';
 import { useReport } from '../data/report';
-import { scopeLabel } from '../data/summary';
+import { isProjectInventory, scopeLabel } from '../data/summary';
 import { THEME_MODES, type ThemeMode, useThemeMode } from '../ui5/theme';
 import { EmptyState } from './EmptyState';
 import { ErrorBoundary } from './ErrorBoundary';
@@ -71,7 +71,13 @@ export function AppShell() {
   const { pathname } = useLocation();
   const data = report.data ?? null;
   const [themeOpener, setThemeOpener] = useState<HTMLElement | null>(null);
-  const section = TABS.find((tab) => tab.path === pathname)?.label ?? 'Report';
+  // A project scan lists projects, not apps, under the same route.
+  const tabs = TABS.map((tab) =>
+    tab.path === '/apps' && data && isProjectInventory(data.apps)
+      ? { ...tab, label: 'Projects' }
+      : tab,
+  );
+  const section = tabs.find((tab) => tab.path === pathname)?.label ?? 'Report';
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
 
@@ -142,7 +148,7 @@ export function AppShell() {
               if (path && path !== pathname) void navigate(path);
             }}
           >
-            {TABS.map((tab) => (
+            {tabs.map((tab) => (
               <Tab
                 key={tab.path}
                 text={tab.label}
@@ -161,7 +167,7 @@ export function AppShell() {
       </main>
       <footer className="footer">
         {data
-          ? `${data.tool.name} ${data.tool.version} · read-only scan of ${data.scope.apiEndpoint} · `
+          ? `${data.tool.name} ${data.tool.version} · read-only scan of ${data.scope.apiEndpoint ?? 'the project files'} · `
           : ''}
         Independent open-source project, not affiliated with SAP.
       </footer>

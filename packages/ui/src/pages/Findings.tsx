@@ -16,6 +16,7 @@ import { useOutletContext, useSearchParams } from 'react-router';
 import { EmptyState } from '../components/EmptyState';
 import { SeverityStatus } from '../components/SeverityStatus';
 import { formatEvidenceValue } from '../data/format';
+import { owaspLabel, owaspTooltip } from '../data/owasp';
 import { SEVERITY_LABEL, SEVERITY_ORDER, isSeverity } from '../data/severity';
 
 /** Only http(s) references become clickable; anything else is shown as text. */
@@ -23,10 +24,27 @@ export function isWebLink(href: string): boolean {
   return /^https?:\/\//i.test(href);
 }
 
+/** "srv/services.cds:3", or just the file when the line is unknown. */
+export function formatLocation(location: NonNullable<Finding['location']>): string {
+  return location.line === undefined ? location.file : `${location.file}:${location.line}`;
+}
+
+/** One project yields many findings per rule, so the key needs where and what. */
+function findingKey(finding: Finding): string {
+  const where = finding.location ? formatLocation(finding.location) : '';
+  return `${finding.id}:${finding.app.guid}:${where}:${formatEvidenceValue(finding.evidence.subject)}`;
+}
+
 function FindingItem({ finding }: { finding: Finding }) {
+  const location = finding.location ? formatLocation(finding.location) : undefined;
   return (
     <ListItemCustom
-      accessibleName={`${SEVERITY_LABEL[finding.severity]}: ${finding.title}, ${finding.app.name}`}
+      accessibleName={[
+        `${SEVERITY_LABEL[finding.severity]}: ${finding.title}, ${finding.app.name}`,
+        location,
+      ]
+        .filter(Boolean)
+        .join(', ')}
     >
       <article className="finding">
         <header className="finding-header">
@@ -38,6 +56,7 @@ function FindingItem({ finding }: { finding: Finding }) {
         <Text className="finding-app">
           {finding.app.org} / {finding.app.space} / <strong>{finding.app.name}</strong>
         </Text>
+        {location && <code className="finding-location">{location}</code>}
         <div>
           <Label showColon>Remediation</Label> <Text>{finding.remediation}</Text>
         </div>
@@ -65,6 +84,12 @@ function FindingItem({ finding }: { finding: Finding }) {
       </article>
     </ListItemCustom>
   );
+}
+
+/** "acme-prod / dev / docs-static" for a CF app, "project acme-incidents" for a local project. */
+function describeApp(app: ReportData['apps'][number] | undefined): string {
+  if (!app) return 'an unknown app';
+  return app.kind === 'project' ? `project ${app.name}` : `${app.org} / ${app.space} / ${app.name}`;
 }
 
 function parseSeverities(value: string | null): Severity[] {
@@ -137,8 +162,8 @@ export function Findings() {
 
       {appGuid !== null && (
         <MessageStrip design="Information" onClose={() => update('app', null)}>
-          Showing findings for {app ? `${app.org} / ${app.space} / ${app.name}` : 'an unknown app'}.
-          Close to show all apps.
+          Showing findings for {describeApp(app)}. Close to show all{' '}
+          {app?.kind === 'project' ? 'projects' : 'apps'}.
         </MessageStrip>
       )}
 
@@ -152,8 +177,14 @@ export function Findings() {
         data.rules.map((rule) => {
           const findings = visible.filter((f) => f.id === rule.id);
           if (findings.length === 0) return null;
+          const owasp = rule.owasp.length > 0 ? ` · OWASP ${rule.owasp.join(', ')}` : '';
           return (
-            <Panel key={rule.id} headerText={`${rule.title} (${findings.length})`} headerLevel="H3">
+            <Panel
+              key={rule.id}
+              headerText={`${rule.title} (${findings.length})${owasp}`}
+              headerLevel="H3"
+              title={rule.owasp.length > 0 ? owaspTooltip(rule.owasp) : undefined}
+            >
               <Text className="rule-description">
                 {rule.description}{' '}
                 {isWebLink(rule.helpUri) && (
@@ -162,9 +193,15 @@ export function Findings() {
                   </Link>
                 )}
               </Text>
+              {rule.owasp.length > 0 && (
+                // The category names in text, for readers who cannot hover the header.
+                <Text className="rule-owasp">
+                  OWASP Top 10 (2025): {rule.owasp.map(owaspLabel).join('; ')}
+                </Text>
+              )}
               <List accessibleName={`${rule.title} findings`}>
                 {findings.map((finding) => (
-                  <FindingItem key={`${finding.id}:${finding.app.guid}`} finding={finding} />
+                  <FindingItem key={findingKey(finding)} finding={finding} />
                 ))}
               </List>
             </Panel>
